@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VLC Redesign — a modern Windows experience powered by VLC's trusted playback engine.">
+  <title>VLC Redesign</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101010;
+      --panel: #1a1a1a;
+      --panel-light: #242424;
+      --text: #f5f5f5;
+      --muted: #a9a9a9;
+      --orange: #ff8a00;
+      --orange-light: #ffb347;
+      --line: rgba(255, 255, 255, .1);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    a { color: inherit; }
+    .wrap { width: min(1120px, calc(100% - 40px)); margin: auto; }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      text-decoration: none;
+    }
+    .mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--orange);
+      color: #151515;
+      font-size: 23px;
+      font-weight: 900;
+    }
+    nav { display: flex; gap: 24px; color: var(--muted); }
+    nav a { text-decoration: none; }
+    nav a:hover { color: var(--text); }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 64px;
+      align-items: center;
+      min-height: 610px;
+      padding: 70px 0 100px;
+    }
+    .eyebrow {
+      color: var(--orange-light);
+      font-size: .8rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 720px;
+      margin: 12px 0 20px;
+      font-size: clamp(3.2rem, 8vw, 6.5rem);
+      line-height: .95;
+      letter-spacing: -.07em;
+    }
+    .lead { max-width: 600px; color: var(--muted); font-size: 1.2rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 32px; }
+    .button {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 12px 20px;
+      text-decoration: none;
+      font-weight: 750;
+    }
+    .button.primary { border-color: var(--orange); background: var(--orange); color: #17110a; }
+    .button:hover { transform: translateY(-1px); }
+    .cone {
+      position: relative;
+      display: grid;
+      width: min(360px, 80vw);
+      height: 360px;
+      margin: auto;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 42px;
+      background: radial-gradient(circle at 50% 36%, #3a260d, #191919 55%);
+      box-shadow: 0 30px 90px rgba(255, 138, 0, .13);
+      font-size: 12rem;
+      line-height: 1;
+    }
+    .cone span { filter: drop-shadow(0 18px 18px rgba(0, 0, 0, .45)); }
+    section { padding: 90px 0; border-top: 1px solid var(--line); }
+    h2 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3.5rem); letter-spacing: -.05em; }
+    .section-intro { max-width: 650px; color: var(--muted); }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 38px;
+    }
+    .card {
+      min-height: 210px;
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--panel);
+    }
+    .card strong { display: block; margin-bottom: 10px; color: var(--orange-light); font-size: 1.1rem; }
+    .card p { margin: 0; color: var(--muted); }
+    .download {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 28px;
+      padding: 38px;
+      border: 1px solid rgba(255, 138, 0, .35);
+      border-radius: 26px;
+      background: linear-gradient(120deg, #2a1a08, var(--panel));
+    }
+    .download p { margin: 8px 0 0; color: var(--muted); }
+    footer { padding: 30px 0 50px; color: var(--muted); font-size: .9rem; }
+    @media (max-width: 760px) {
+      nav { display: none; }
+      .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 45px; }
+      .cone { width: 260px; height: 260px; font-size: 8rem; }
+      .cards { grid-template-columns: 1fr; }
+      .download { align-items: flex-start; flex-direction: column; padding: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap nav">
+    <a class="brand" href="#">
+      <span class="mark">▶</span>
+      <span>VLC Redesign</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#features">Features</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/siyad23/vlc-redesign">Source</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="wrap hero">
+      <div>
+        <div class="eyebrow">VLC, reimagined</div>
+        <h1>Powerful playback. Less friction.</h1>
+        <p class="lead">A modern Windows experience built on VLC's trusted, open-source media engine. Familiar where it matters, redesigned where it counts.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/siyad23/vlc-redesign/releases/download/v0.1.0/vlc-redesign-v0.1.0-win64.exe">Download for Windows</a>
+          <a class="button" href="https://github.com/siyad23/vlc-redesign">View source</a>
+        </div>
+      </div>
+      <div class="cone" aria-label="VLC redesign mark"><span>▲</span></div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <div class="eyebrow">Designed for everyday playback</div>
+        <h2>Everything you love. Easier to use.</h2>
+        <p class="section-intro">The redesign keeps VLC's format support and no-bloat philosophy while bringing the interface into a more focused, discoverable era.</p>
+        <div class="cards">
+          <article class="card">
+            <strong>Modern onboarding</strong>
+            <p>Set up your language, media folders, theme, and accent color in one welcoming first-run flow.</p>
+          </article>
+          <article class="card">
+            <strong>Focused controls</strong>
+            <p>Quiet, floating playback controls and a consolidated top bar keep attention on the media.</p>
+          </article>
+          <article class="card">
+            <strong>Built for Windows</strong>
+            <p>Native window behavior, a refined title bar, and a packaged x64 release make VLC feel at home.</p>
+          </article>
+          <article class="card">
+            <strong>Media library</strong>
+            <p>Browse folders and collections from a clear home view without losing the power of the classic player.</p>
+          </article>
+          <article class="card">
+            <strong>Flexible themes</strong>
+            <p>Choose a light, dark, AMOLED, or system theme with accents that make the interface yours.</p>
+          </article>
+          <article class="card">
+            <strong>Still VLC</strong>
+            <p>Open source, privacy-respecting, and powered by the codecs and formats that made VLC iconic.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="download">
+      <div class="wrap download">
+        <div>
+          <div class="eyebrow">Latest release · v0.1.0</div>
+          <h2>Try the redesign.</h2>
+          <p>Windows x64 installer. Verify the download with the published SHA-256 checksum.</p>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/siyad23/vlc-redesign/releases/download/v0.1.0/vlc-redesign-v0.1.0-win64.exe">Get the installer</a>
+          <a class="button" href="https://github.com/siyad23/vlc-redesign/releases/tag/v0.1.0">Release notes</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    VLC Redesign is an open-source community project based on VLC.
+    <a href="https://github.com/siyad23/vlc-redesign">Contribute on GitHub</a>.
+  </footer>
+</body>
+</html>
