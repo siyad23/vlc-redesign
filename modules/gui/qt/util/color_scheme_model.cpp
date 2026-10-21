@@ -22,7 +22,12 @@
 
 ColorSchemeModel::ColorSchemeModel(QObject* parent)
     : QAbstractListModel(parent)
-    , m_list {{qtr("System"), ColorScheme::System}, {qtr("Day"), ColorScheme::Day}, {qtr("Night"), ColorScheme::Night}}
+    , m_list {
+        {qtr("System"), ColorScheme::System},
+        {qtr("Day"), ColorScheme::Day},
+        {qtr("Night"), ColorScheme::Night},
+        {qtr("AMOLED Black"), ColorScheme::Amoled}
+    }
     , m_currentIndex {0}
 {
 }
@@ -51,6 +56,9 @@ QVariant ColorSchemeModel::data(const QModelIndex &index, const int role) const
     if (role == Qt::DisplayRole)
         return m_list[index.row()].text;
 
+    if (role == SchemeRole)
+        return m_list[index.row()].scheme;
+
     return QVariant {};
 }
 
@@ -68,6 +76,15 @@ bool ColorSchemeModel::setData(const QModelIndex &index,
     }
 
     return false;
+}
+
+QHash<int, QByteArray> ColorSchemeModel::roleNames() const
+{
+    return {
+        {Qt::DisplayRole, QByteArrayLiteral("display")},
+        {Qt::CheckStateRole, QByteArrayLiteral("checked")},
+        {SchemeRole, QByteArrayLiteral("scheme")}
+    };
 }
 
 int ColorSchemeModel::currentIndex() const
@@ -88,6 +105,18 @@ void ColorSchemeModel::setCurrentIndex(const int newIndex)
     emit dataChanged(index(m_currentIndex), index(m_currentIndex), {Qt::CheckStateRole});
     emit dataChanged(oldIndex, oldIndex, {Qt::CheckStateRole});
     emit currentChanged();
+}
+
+void ColorSchemeModel::setCurrentScheme(const ColorScheme scheme)
+{
+    for (int i = 0; i < m_list.size(); ++i)
+    {
+        if (m_list[i].scheme == scheme)
+        {
+            setCurrentIndex(i);
+            return;
+        }
+    }
 }
 
 QString ColorSchemeModel::currentText() const

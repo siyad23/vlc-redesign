@@ -826,12 +826,12 @@ static void UpdateParams(vout_display_t *vd)
 #endif
 
     int preset = var_InheritInteger(vd, "pl-upscaler-preset");
-    sys->params.upscaler = scale_config[preset];
+    sys->params.upscaler = vlc_placebo_ScaleConfig(preset);
     if (preset == SCALE_CUSTOM) {
         sys->params.upscaler = &sys->upscaler;
         sys->upscaler = (struct pl_filter_config) {
-            .kernel = filter_fun[var_InheritInteger(vd, "pl-upscaler-kernel")],
-            .window = filter_fun[var_InheritInteger(vd, "pl-upscaler-window")],
+            .kernel = vlc_placebo_FilterFunction(var_InheritInteger(vd, "pl-upscaler-kernel")),
+            .window = vlc_placebo_FilterFunction(var_InheritInteger(vd, "pl-upscaler-window")),
             .clamp  = var_InheritFloat(vd, "pl-upscaler-clamp"),
             .blur   = var_InheritFloat(vd, "pl-upscaler-blur"),
             .taper  = var_InheritFloat(vd, "pl-upscaler-taper"),
@@ -845,12 +845,12 @@ static void UpdateParams(vout_display_t *vd)
     };
 
     preset = var_InheritInteger(vd, "pl-downscaler-preset");
-    sys->params.downscaler = scale_config[preset];
+    sys->params.downscaler = vlc_placebo_ScaleConfig(preset);
     if (preset == SCALE_CUSTOM) {
         sys->params.downscaler = &sys->downscaler;
         sys->downscaler = (struct pl_filter_config) {
-            .kernel = filter_fun[var_InheritInteger(vd, "pl-downscaler-kernel")],
-            .window = filter_fun[var_InheritInteger(vd, "pl-downscaler-window")],
+            .kernel = vlc_placebo_FilterFunction(var_InheritInteger(vd, "pl-downscaler-kernel")),
+            .window = vlc_placebo_FilterFunction(var_InheritInteger(vd, "pl-downscaler-window")),
             .clamp  = var_InheritFloat(vd, "pl-downscaler-clamp"),
             .blur   = var_InheritFloat(vd, "pl-downscaler-blur"),
             .taper  = var_InheritFloat(vd, "pl-downscaler-taper"),

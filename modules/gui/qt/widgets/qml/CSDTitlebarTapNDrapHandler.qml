@@ -38,7 +38,8 @@ Item {
                 return
 
             // handle left button click
-            if ((MainCtx.intfMainWindow.visibility & Window.Maximized) !== 0) {
+            if (MainCtx.intfMainWindow.visibility === Window.Maximized ||
+                MainCtx.intfMainWindow.visibility === Window.FullScreen) {
                 MainCtx.requestInterfaceNormal()
             } else {
                 MainCtx.requestInterfaceMaximized()

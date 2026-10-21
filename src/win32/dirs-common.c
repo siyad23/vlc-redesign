@@ -88,22 +88,25 @@ char *config_GetSysPath(vlc_sysdir_t type, const char *filename)
             dir = config_GetDataDir();
             break;
         case VLC_PKG_LIB_DIR:
-            dir = getenv ("VLC_LIB_PATH");
-            if (dir)
-                return strdup( dir );
-            dir = config_GetLibDir();
+        {
+            const char *path = getenv("VLC_LIB_PATH");
+            dir = path ? strdup(path) : config_GetLibDir();
             break;
+        }
         case VLC_PKG_LIBEXEC_DIR:
-            dir = getenv ("VLC_LIBEXEC_PATH");
-            if (dir)
-                return strdup( dir );
-            dir = config_GetLibexecDir();
+        {
+            const char *path = getenv("VLC_LIBEXEC_PATH");
+            dir = path ? strdup(path) : config_GetLibexecDir();
             break;
+        }
         case VLC_SYSDATA_DIR:
             break;
         case VLC_LOCALE_DIR:
-            dir = config_GetSysPath(VLC_PKG_DATA_DIR, "locale");
+        {
+            const char *path = getenv("VLC_LOCALE_PATH");
+            dir = path ? strdup(path) : config_GetSysPath(VLC_PKG_DATA_DIR, "locale");
             break;
+        }
         default:
             vlc_assert_unreachable();
     }

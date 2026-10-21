@@ -66,6 +66,8 @@
 #include <QMimeData>
 #include <QClipboard>
 #include <QInputDialog>
+#include <QFileDialog>
+#include <QDir>
 
 #include <QQmlProperty>
 
@@ -80,10 +82,13 @@
 
 #ifdef _WIN32
 #include <QFileInfo>
+#include "util/registry.hpp"
 #endif
 
 #include <vlc_interface.h>
 #include <vlc_preparser.h>
+#include <vlc_url.h>
+#include <vlc_cxx_helpers.hpp>
 
 #define VLC_REFERENCE_SCALE_FACTOR 96.
 
@@ -161,6 +166,11 @@ MainCtx::MainCtx(qt_intf_t *_p_intf)
     settings = getSettings();
     m_colorScheme = new ColorSchemeModel(this);
 
+    connect(m_colorScheme, &ColorSchemeModel::currentChanged, this, [this]() {
+        if (settings && !p_intf->preferencesResetPending)
+            settings->setValue("MainWindow/color-scheme-index", m_colorScheme->currentIndex());
+    });
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     connect(m_colorScheme, &ColorSchemeModel::currentChanged, qGuiApp, [colorScheme = m_colorScheme]() {
         QStyleHints *const styleHints = qGuiApp->styleHints();
@@ -174,6 +184,7 @@ MainCtx::MainCtx(qt_intf_t *_p_intf)
             scheme = Qt::ColorScheme::Light;
             break;
         case ColorSchemeModel::ColorScheme::Night:
+        case ColorSchemeModel::ColorScheme::Amoled:
             scheme = Qt::ColorScheme::Dark;
             break;
         case ColorSchemeModel::ColorScheme::System:
@@ -264,12 +275,10 @@ MainCtx::MainCtx(qt_intf_t *_p_intf)
     /* Register callback for the intf-popupmenu variable */
     var_AddCallback( libvlc, "intf-popupmenu", PopupMenuCB, p_intf );
 
-    if( var_InheritBool( p_intf, "qt-privacy-ask") )
+    m_hasFirstrun = var_InheritBool( p_intf, "qt-privacy-ask" );
+    if( m_hasFirstrun )
     {
-        //postpone dialog call, as composition might not be ready yet
-        QMetaObject::invokeMethod(this, [](){
-            THEDP->firstRunDialog();
-        }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, &MainCtx::addDefaultMediaFolders, Qt::QueuedConnection);
     }
     else if (m_medialib)
     {
@@ -338,6 +347,7 @@ MainCtx::~MainCtx()
         settings->setValue( "album-sections", m_albumSections );
 
         settings->setValue( "lyrics-mode", m_lyricsMode );
+        settings->setValue( "advanced-controls", m_advancedControls );
 
         /* Save the stackCentralW sizes */
         settings->endGroup();
@@ -383,7 +393,153 @@ bool MainCtx::useClientSideDecoration() const
 }
 
 bool MainCtx::hasFirstrun() const {
-    return var_InheritBool(p_intf,  "qt-privacy-ask" );
+    return m_hasFirstrun;
+}
+
+void MainCtx::setHasFirstrun(bool hasFirstrun)
+{
+    if (m_hasFirstrun == hasFirstrun)
+        return;
+    m_hasFirstrun = hasFirstrun;
+    emit hasFirstrunChanged();
+}
+
+void MainCtx::setAppLanguage(const QString& lang)
+{
+    const QString normalized = lang.isEmpty() ? QStringLiteral("auto") : lang;
+    if (m_appLanguage == normalized)
+        return;
+    m_appLanguage = normalized;
+    if (getSettings())
+        getSettings()->setValue("MainWindow/language", m_appLanguage);
+#ifdef _WIN32
+    QVLCRegistry qvReg(HKEY_CURRENT_USER);
+    if (m_appLanguage == QLatin1String("auto"))
+    {
+        qvReg.DeleteValue("Software\\VideoLAN\\VLC\\", "Lang");
+    }
+    else
+    {
+        const QByteArray langUtf8 = m_appLanguage.toUtf8();
+        qvReg.WriteRegistry("Software\\VideoLAN\\VLC\\", "Lang", langUtf8.constData());
+    }
+#endif
+    emit appLanguageChanged();
+}
+
+QVariantList MainCtx::availableLanguages() const
+{
+    static const struct {
+        const char *iso;
+        const char *name;
+    } kLanguageMap[] = {
+        { "auto",  N_("Auto (System Default)") },
+        { "en",    "American English" },
+        { "en_GB", "British English" },
+        { "ar",    "عربي" },
+        { "bn",    "বাংলা" },
+        { "pt_BR", "Português Brasileiro" },
+        { "de",    "Deutsch" },
+        { "es",    "Español" },
+        { "fr",    "Français" },
+        { "hi",    "हिन्दी" },
+        { "id",    "Bahasa Indonesia" },
+        { "it",    "Italiano" },
+        { "ja",    "日本語" },
+        { "ko",    "한국어" },
+        { "nl",    "Nederlands" },
+        { "pl",    "Polski" },
+        { "pt_PT", "Português" },
+        { "ru",    "Русский" },
+        { "sv",    "Svenska" },
+        { "tr",    "Türkçe" },
+        { "uk",    "украї́нська мо́ва" },
+        { "vi",    "tiếng Việt" },
+        { "zh_CN", "简体中文" },
+        { "zh_TW", "正體中文" }
+    };
+
+    QVariantList list;
+    list.reserve(ARRAY_SIZE(kLanguageMap));
+    for (size_t i = 0; i < ARRAY_SIZE(kLanguageMap); ++i)
+    {
+        QVariantMap item;
+        item[QStringLiteral("code")] = QString::fromLatin1(kLanguageMap[i].iso);
+        item[QStringLiteral("label")] = (i == 0) ? qtr(kLanguageMap[i].name) : QString::fromUtf8(kLanguageMap[i].name);
+        list.append(item);
+    }
+    return list;
+}
+
+void MainCtx::addDefaultMediaFolders()
+{
+    if (!m_medialib)
+        return;
+
+    m_medialib->runOnMLThread(this, [](vlc_medialibrary_t* ml) {
+        vlc_ml_folder_list_t* entrypoints = vlc_ml_list_entry_points(ml, nullptr);
+        const bool isEmpty = (!entrypoints || entrypoints->i_nb_items == 0);
+        if (entrypoints)
+            vlc_ml_release(entrypoints);
+
+        if (!isEmpty)
+            return;
+
+        for (auto&& target : { VLC_VIDEOS_DIR, VLC_MUSIC_DIR })
+        {
+            auto folder = vlc::wrap_cptr(config_GetUserDir(target));
+            if (!folder)
+                continue;
+            auto folderMrl = vlc::wrap_cptr(vlc_path2uri(folder.get(), nullptr));
+            if (folderMrl)
+                vlc_ml_add_folder(ml, folderMrl.get());
+        }
+    });
+}
+
+QUrl MainCtx::chooseFolderDialog()
+{
+    return QFileDialog::getExistingDirectoryUrl(
+        nullptr,
+        qtr("Choose a folder to add to the Media Library"),
+        QUrl::fromLocalFile(QDir::homePath()));
+}
+
+void MainCtx::completeFirstRun(bool enableMetadataNetworkAccess, bool pinControls)
+{
+    config_PutInt("metadata-network-access", enableMetadataNetworkAccess ? 1 : 0);
+    config_PutInt("qt-privacy-ask", 0);
+    var_SetBool(p_intf, "qt-privacy-ask", false);
+
+    // Modern CSD + floating or pinned controls based on user choice
+    config_PutInt("qt-menubar", 0);
+    config_PutInt("qt-titlebar", 0);
+    config_PutInt("qt-pin-controls", pinControls ? 1 : 0);
+    setPinVideoControls(pinControls);
+
+    if (m_controlbarProfileModel)
+    {
+        const auto style = pinControls
+            ? ControlbarProfileModel::Style::CLASSIC_STYLE
+            : ControlbarProfileModel::Style::DEFAULT_STYLE;
+        std::unique_ptr<ControlbarProfile> profile(m_controlbarProfileModel->generateProfileFromStyle(style));
+        if (profile)
+        {
+            const std::optional<int> index = m_controlbarProfileModel->findModel(profile.get());
+            if (index)
+                m_controlbarProfileModel->setSelectedProfile(*index);
+            else
+                m_controlbarProfileModel->insertProfile(std::move(profile), true);
+        }
+        m_controlbarProfileModel->save();
+    }
+
+    if (m_medialib)
+        m_medialib->reload();
+
+    reloadPrefs();
+    config_SaveConfigFile(p_intf);
+    setHasFirstrun(false);
 }
 
 void MainCtx::setUseGlobalShortcuts( bool useShortcuts )
@@ -493,9 +649,26 @@ void MainCtx::loadFromSettingsImpl(const bool callSignals)
     loadFromSettings(m_albumSections, "MainWindow/album-sections", true, this, &MainCtx::albumSectionsChanged);
 
     loadFromSettings(m_lyricsMode, "MainWindow/lyrics-mode", true, this, &MainCtx::lyricsModeChanged);
+    loadFromSettings(m_advancedControls, "MainWindow/advanced-controls", true, this, &MainCtx::advancedControlsChanged);
 
     const auto colorSchemeIndex = getSettings()->value( "MainWindow/color-scheme-index", 0 ).toInt();
     m_colorScheme->setCurrentIndex(colorSchemeIndex);
+
+    m_appLanguage = getSettings()->value( "MainWindow/language", QStringLiteral("auto") ).toString();
+#ifdef _WIN32
+    {
+        QVLCRegistry qvReg(HKEY_CURRENT_USER);
+        if (qvReg.RegistryValueExists("Software\\VideoLAN\\VLC\\", "Lang"))
+        {
+            char *langReg = qvReg.ReadRegistry("Software\\VideoLAN\\VLC\\", "Lang", "auto");
+            if (langReg)
+            {
+                m_appLanguage = QString::fromUtf8(langReg);
+                free(langReg);
+            }
+        }
+    }
+#endif
 
     /* user interface scale factor */
     auto userIntfScaleFactor = var_InheritFloat(p_intf, "qt-interface-scale");
@@ -623,6 +796,17 @@ void MainCtx::setPinVideoControls(bool pinVideoControls)
 
     m_pinVideoControls = pinVideoControls;
     emit pinVideoControlsChanged();
+}
+
+void MainCtx::setAdvancedControls(bool enabled)
+{
+    if (m_advancedControls == enabled)
+        return;
+
+    m_advancedControls = enabled;
+    if (!p_intf->preferencesResetPending)
+        getSettings()->setValue("MainWindow/advanced-controls", enabled);
+    emit advancedControlsChanged(enabled);
 }
 
 void MainCtx::setPinOpacity(float pinOpacity)

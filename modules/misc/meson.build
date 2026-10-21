@@ -101,7 +101,7 @@ if gnutls_dep.found()
     vlc_modules += {
         'name' : 'gnutls',
         'sources' : files('gnutls.c'),
-        'dependencies' : [gnutls_dep, gnutls_darwin_deps],
+        'dependencies' : [gnutls_dep, gnutls_darwin_deps, socket_libs],
         'plugin_dir' : 'misc',
     }
 endif

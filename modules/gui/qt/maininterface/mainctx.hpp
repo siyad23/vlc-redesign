@@ -115,11 +115,13 @@ class MainCtx : public QObject
     Q_PROPERTY(ColorSchemeModel* colorScheme READ getColorScheme CONSTANT FINAL)
     Q_PROPERTY(bool hasVLM READ hasVLM CONSTANT FINAL)
     Q_PROPERTY(bool clientSideDecoration READ useClientSideDecoration NOTIFY useClientSideDecorationChanged FINAL)
-    Q_PROPERTY(bool hasFirstrun READ hasFirstrun CONSTANT FINAL)
+    Q_PROPERTY(bool hasFirstrun READ hasFirstrun WRITE setHasFirstrun NOTIFY hasFirstrunChanged FINAL)
+    Q_PROPERTY(QString appLanguage READ appLanguage WRITE setAppLanguage NOTIFY appLanguageChanged FINAL)
     Q_PROPERTY(int  csdBorderSize READ CSDBorderSize NOTIFY useClientSideDecorationChanged FINAL)
     Q_PROPERTY(bool hasToolbarMenu READ hasToolbarMenu WRITE setHasToolbarMenu NOTIFY hasToolbarMenuChanged FINAL)
     Q_PROPERTY(bool canShowVideoPIP READ canShowVideoPIP CONSTANT FINAL)
     Q_PROPERTY(bool pinVideoControls READ pinVideoControls WRITE setPinVideoControls NOTIFY pinVideoControlsChanged FINAL)
+    Q_PROPERTY(bool advancedControls READ advancedControls WRITE setAdvancedControls NOTIFY advancedControlsChanged FINAL)
     Q_PROPERTY(float pinOpacity READ pinOpacity WRITE setPinOpacity NOTIFY pinOpacityChanged FINAL)
     Q_PROPERTY(ControlbarProfileModel* controlbarProfileModel READ controlbarProfileModel CONSTANT FINAL)
     Q_PROPERTY(bool hasAcrylicSurface READ hasAcrylicSurface NOTIFY hasAcrylicSurfaceChanged FINAL)
@@ -243,11 +245,20 @@ public:
     bool hasVLM() const;
     bool useClientSideDecoration() const;
     bool hasFirstrun() const;
+    void setHasFirstrun(bool hasFirstrun);
+    QString appLanguage() const { return m_appLanguage; }
+    void setAppLanguage(const QString& iso);
+    Q_INVOKABLE QVariantList availableLanguages() const;
+    Q_INVOKABLE void addDefaultMediaFolders();
+    Q_INVOKABLE QUrl chooseFolderDialog();
+    Q_INVOKABLE void completeFirstRun(bool enableMetadataNetworkAccess, bool pinControls);
     inline bool hasToolbarMenu() const { return m_hasToolbarMenu; }
     inline bool canShowVideoPIP() const { return m_canShowVideoPIP; }
     inline void setCanShowVideoPIP(bool canShowVideoPIP) { m_canShowVideoPIP = canShowVideoPIP; }
 
     inline bool pinVideoControls() const { return m_pinVideoControls; }
+    bool advancedControls() const { return m_advancedControls; }
+    void setAdvancedControls(bool enabled);
     inline float pinOpacity() const { return m_pinOpacity; }
 
     inline ControlbarProfileModel* controlbarProfileModel() const { return m_controlbarProfileModel; }
@@ -458,6 +469,7 @@ protected:
 
     /* Pinned */
     bool                 m_pinVideoControls = false;
+    bool                 m_advancedControls = true;
     float                m_pinOpacity       = 1.0f;
 
     bool                 m_useGlobalShortcuts = true;
@@ -497,6 +509,8 @@ protected:
     int m_osVersion;
 
     bool m_bgCone = true;
+    bool m_hasFirstrun = false;
+    QString m_appLanguage = QStringLiteral("auto");
     bool m_windowSuportExtendedFrame = false;
     unsigned m_windowExtendedMargin = 0;
 
@@ -576,6 +590,8 @@ signals:
     void colorSchemeChanged( QString );
     void useClientSideDecorationChanged();
     void hasToolbarMenuChanged();
+    void hasFirstrunChanged();
+    void appLanguageChanged();
 
     /// forward window maximise query to the actual window or widget
     void requestInterfaceMaximized();
@@ -588,6 +604,7 @@ signals:
     void intfDevicePixelRatioChanged();
 
     void pinVideoControlsChanged();
+    void advancedControlsChanged(bool enabled);
     void pinOpacityChanged();
 
     void hasAcrylicSurfaceChanged(bool);

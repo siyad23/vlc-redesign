@@ -304,35 +304,85 @@ SystemPalette::SystemPalette(QObject* parent)
 
 void SystemPalette::componentComplete()
 {
+    if (m_ctx)
     {
-        assert(m_ctx);
-        char* accentColor = var_InheritString(m_ctx->getIntf(), "qt-accent-color");
-        assert(accentColor);
+        char* accentCfg = var_InheritString(m_ctx->getIntf(), "qt-accent-color");
+        QString initialAccent = accentCfg ? qfu(accentCfg) : QStringLiteral("default");
+        free(accentCfg);
 
-        if (!strcmp(accentColor, "default"))
+        if (initialAccent == QLatin1String("default") && m_ctx->getIntf()->mainSettings)
         {
-            // Use default
+            initialAccent = m_ctx->getIntf()->mainSettings->value(
+                QStringLiteral("MainWindow/accent-color"), QStringLiteral("default")).toString();
         }
+        m_accentColor = initialAccent;
+    }
+    applyAccentColor(m_accentColor);
+    updatePalette();
+}
+
+void SystemPalette::applyAccentColor(const QString& accentStr)
+{
+    if (accentStr.isEmpty() || accentStr == QLatin1String("default"))
+    {
+        orange500 = QColor("#FF8800");
+        orange800 = QColor("#FF610A");
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
-        else if (!strcmp(accentColor, "system"))
+    else if (accentStr == QLatin1String("system"))
+    {
+        if (qApp)
         {
-            assert(qApp);
             const auto palette = qApp->palette();
-
             orange500 = palette.color(QPalette::Normal, QPalette::Accent);
-            orange800 = orange500.lighter(150);
+            orange800 = orange500.darker(115);
         }
+    }
 #endif
-        else
+    else
+    {
+        const QColor customColor(accentStr);
+        if (customColor.isValid())
         {
-            orange500 = QColor(accentColor);
-            orange800 = orange500.lighter(150);
+            orange500 = customColor;
+            orange800 = orange500.darker(115);
         }
+    }
+}
 
-        free(accentColor);
+void SystemPalette::setAccentColor(const QString& accentColor)
+{
+    const QString normalized = accentColor.isEmpty() ? QStringLiteral("default") : accentColor;
+    if (m_accentColor == normalized)
+        return;
+
+    m_accentColor = normalized;
+    applyAccentColor(m_accentColor);
+
+    config_PutPsz("qt-accent-color", qtu(m_accentColor));
+    if (m_ctx && m_ctx->getIntf() && m_ctx->getIntf()->mainSettings)
+    {
+        m_ctx->getIntf()->mainSettings->setValue(QStringLiteral("MainWindow/accent-color"), m_accentColor);
     }
 
     updatePalette();
+    emit accentColorChanged();
+}
+
+QVariantList SystemPalette::accentSwatches() const
+{
+    return {
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("default")},   {QStringLiteral("name"), qtr("Traffic Cone")},  {QStringLiteral("color"), QStringLiteral("#FF8800")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("#00F5D4")},   {QStringLiteral("name"), qtr("Neon")},          {QStringLiteral("color"), QStringLiteral("#00F5D4")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("#FF4D6D")},   {QStringLiteral("name"), qtr("Sunset")},        {QStringLiteral("color"), QStringLiteral("#FF4D6D")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("#9D4EDD")},   {QStringLiteral("name"), qtr("Aurora")},        {QStringLiteral("color"), QStringLiteral("#9D4EDD")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("#F72585")},   {QStringLiteral("name"), qtr("Synthwave")},     {QStringLiteral("color"), QStringLiteral("#F72585")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("#3A86FF")},   {QStringLiteral("name"), qtr("Electric Blue")}, {QStringLiteral("color"), QStringLiteral("#3A86FF")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("#10B981")},   {QStringLiteral("name"), qtr("Emerald")},       {QStringLiteral("color"), QStringLiteral("#10B981")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("#F59E0B")},   {QStringLiteral("name"), qtr("Amber Gold")},    {QStringLiteral("color"), QStringLiteral("#F59E0B")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("#EF4444")},   {QStringLiteral("name"), qtr("Crimson")},       {QStringLiteral("color"), QStringLiteral("#EF4444")}},
+        QVariantMap{{QStringLiteral("id"), QStringLiteral("system")},    {QStringLiteral("name"), qtr("System")},        {QStringLiteral("color"), QStringLiteral("#FF8800")}}
+    };
 }
 
 ColorSchemeModel::ColorScheme SystemPalette::source() const
@@ -395,6 +445,9 @@ void SystemPalette::updatePalette()
         break;
     case ColorSchemeModel::Night:
         makeDarkPalette();
+        break;
+    case ColorSchemeModel::Amoled:
+        makeAmoledPalette();
         break;
     default:
         break;
@@ -593,7 +646,7 @@ void SystemPalette::makeLightPalette()
     {
         C::ColorSet CS = C::ButtonAccent;
         setColor(CS, C::Bg, C::Primary, C::Normal, orange800);
-        setColor(CS, C::Bg, C::Primary, C::Pressed, QColor("#e65609"));  //FIXME not a predef
+        setColor(CS, C::Bg, C::Primary, C::Pressed, orange800.darker(115));
         setColor(CS, C::Bg, C::Primary, C::Disabled, setColorAlpha(Qt::black, 0.2));
 
         setColor(CS, C::Fg, C::Primary, C::Normal, Qt::white);
@@ -805,7 +858,7 @@ void SystemPalette::makeDarkPalette()
     {
         C::ColorSet CS = C::ButtonAccent;
         setColor(CS, C::Bg, C::Primary, C::Normal, orange500);
-        setColor(CS, C::Bg, C::Primary, C::Pressed, QColor("#e67a30"));  //FIXME not a predef
+        setColor(CS, C::Bg, C::Primary, C::Pressed, orange500.darker(115));
         setColor(CS, C::Bg, C::Primary, C::Disabled, setColorAlpha(Qt::white, 0.2));
 
         setColor(CS, C::Fg, C::Primary, C::Normal, Qt::white);
@@ -892,8 +945,49 @@ void SystemPalette::makeDarkPalette()
         setColor(CS, C::Decoration, C::Border, C::Disabled, setColorAlpha(Qt::white, 0.0) );
 
         setColor(CS, C::Bg, C::Highlight, C::Normal, lightGrey600); //FIXME
-        setColor(CS, C::Fg, C::Highlight, C::Normal, Qt::black); //FIXME
+        setColor(CS, C::Fg, C::Highlight, C::Normal, Qt::white); //FIXME
     }
+}
+
+void SystemPalette::makeAmoledPalette()
+{
+    makeDarkPalette();
+
+    typedef ColorContext C;
+    const QColor amoledBlack(0, 0, 0);
+    const QColor amoledElevated("#0A0A0A");
+    const QColor amoledHover("#141414");
+    const QColor amoledBorder("#1F1F1F");
+
+    // View surfaces: pure pitch-black for OLED displays
+    setColor(C::View, C::Bg, C::Primary, C::Normal, amoledBlack);
+    setColor(C::View, C::Bg, C::Secondary, C::Normal, amoledBlack);
+    setColor(C::View, C::Decoration, C::Separator, C::Normal, amoledBorder);
+
+    // Window banner & miniplayer
+    setColor(C::Window, C::Bg, C::Primary, C::Normal, amoledBlack);
+    setColor(C::Window, C::Bg, C::Secondary, C::Normal, amoledBlack);
+    setColor(C::Window, C::Decoration, C::Border, C::Normal, amoledBorder);
+
+    // TabButton & MenuBar
+    setColor(C::TabButton, C::Bg, C::Primary, C::Normal, Qt::transparent);
+    setColor(C::TabButton, C::Bg, C::Primary, C::Focused, amoledHover);
+    setColor(C::TabButton, C::Bg, C::Primary, C::Hovered, amoledHover);
+
+    setColor(C::MenuBar, C::Bg, C::Primary, C::Normal, Qt::transparent);
+    setColor(C::MenuBar, C::Bg, C::Primary, C::Focused, amoledHover);
+    setColor(C::MenuBar, C::Bg, C::Primary, C::Hovered, amoledHover);
+
+    // Items & Lists
+    setColor(C::Item, C::Bg, C::Primary, C::Normal, Qt::transparent);
+    setColor(C::Item, C::Bg, C::Primary, C::Focused, amoledHover);
+    setColor(C::Item, C::Bg, C::Primary, C::Hovered, amoledHover);
+    setColor(C::Item, C::Bg, C::Highlight, C::Normal, amoledHover);
+
+    // Tooltip & ComboBox
+    setColor(C::Tooltip, C::Bg, C::Primary, C::Normal, amoledElevated);
+    setColor(C::ComboBox, C::Bg, C::Primary, C::Normal, amoledElevated);
+    setColor(C::ComboBox, C::Bg, C::Secondary, C::Normal, amoledHover);
 }
 
 void SystemPalette::makeSystemPalette()

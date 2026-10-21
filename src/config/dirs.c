@@ -30,6 +30,8 @@
 
 static const char *userdir_to_env[] =
 {
+    [VLC_CONFIG_DIR] = "VLC_CONFIG_PATH",
+    [VLC_CACHE_DIR] = "VLC_CACHE_PATH",
     [VLC_USERDATA_DIR] = "VLC_USERDATA_PATH",
 };
 

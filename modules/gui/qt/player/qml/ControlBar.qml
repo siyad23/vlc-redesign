@@ -26,6 +26,7 @@ import VLC.MainInterface
 import VLC.Style
 import VLC.Widgets as Widgets
 import VLC.Player
+import VLC.PlayerControls as Controls
 import VLC.Util
 
 T.Pane {
@@ -54,6 +55,7 @@ T.Pane {
     property bool showRemainingTime: true
 
     property var menu: undefined
+    readonly property bool isInteracting: (contentItem?.trackPositionSlider?.pressed ?? false) || (menu !== undefined && menu !== null)
 
     signal requestLockUnlockAutoHide(bool lock)
 
@@ -311,30 +313,94 @@ T.Pane {
             Layout.rightMargin: Layout.leftMargin
         }
 
-        PlayerControlLayout {
-            id: playerControlLayout
-
+        RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.leftMargin: VLCStyle.margin_large
             Layout.rightMargin: VLCStyle.margin_large
+            spacing: VLCStyle.margin_large
 
-            identifier: root.identifier
+            PlayerControlLayout {
+                id: playerControlLayout
 
-            implicitHeight: MainCtx.pinVideoControls ? VLCStyle.controlLayoutHeightPinned
-                                                     : VLCStyle.controlLayoutHeight
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumWidth: 0
 
-            visible: !model?.empty ?? false
+                identifier: root.identifier
 
-            Navigation.upItem: trackPositionSlider.enabled ? trackPositionSlider : root.Navigation.upItem
+                implicitHeight: MainCtx.pinVideoControls ? VLCStyle.controlLayoutHeightPinned
+                                                         : VLCStyle.controlLayoutHeight
 
-            onRequestLockUnlockAutoHide: (lock) => root.requestLockUnlockAutoHide(lock)
+                visible: !model?.empty ?? false
 
-            onMenuOpened: (menu) => root.applyMenu(menu)
+                Navigation.upItem: trackPositionSlider.enabled ? trackPositionSlider : root.Navigation.upItem
+                Navigation.rightItem: advancedControls.visible ? recordButton : root.Navigation.rightItem
 
-            Component.onCompleted: {
-                root.forceUnlock.connect(playerControlLayout.forceUnlock)
+                onRequestLockUnlockAutoHide: (lock) => root.requestLockUnlockAutoHide(lock)
+
+                onMenuOpened: (menu) => root.applyMenu(menu)
+
+                Component.onCompleted: {
+                    root.forceUnlock.connect(playerControlLayout.forceUnlock)
+                }
             }
+
+            Rectangle {
+                visible: advancedControls.visible
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: VLCStyle.icon_toolbar
+                color: theme.border
+            }
+
+        RowLayout {
+            id: advancedControls
+
+            visible: MainCtx.advancedControls && (root.identifier === Controls.PlayerControlbarModel.Videoplayer
+                                                || root.identifier === Controls.PlayerControlbarModel.Audioplayer)
+            Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+            spacing: VLCStyle.margin_normal
+
+            Controls.RecordButton {
+                id: recordButton
+                description: Player.recording ? qsTr("Stop recording") : qsTr("Record")
+                Navigation.parentItem: root
+                Navigation.leftItem: playerControlLayout
+                Navigation.rightItem: snapshotButton
+                Navigation.upItem: trackPositionSlider
+                Navigation.downItem: root.Navigation.downItem
+            }
+
+            Controls.SnapshotButton {
+                id: snapshotButton
+                enabled: Player.isStarted && Player.hasVideoOutput
+                Navigation.parentItem: root
+                Navigation.leftItem: recordButton
+                Navigation.rightItem: loopButton
+                Navigation.upItem: trackPositionSlider
+                Navigation.downItem: root.Navigation.downItem
+            }
+
+            Controls.AtoBButton {
+                id: loopButton
+                enabled: Player.isStarted && Player.seekable
+                Navigation.parentItem: root
+                Navigation.leftItem: snapshotButton
+                Navigation.rightItem: frameButton
+                Navigation.upItem: trackPositionSlider
+                Navigation.downItem: root.Navigation.downItem
+            }
+
+            Controls.FrameNextButton {
+                id: frameButton
+                enabled: Player.isStarted && Player.hasVideoOutput && Player.ratechangable
+                Navigation.parentItem: root
+                Navigation.leftItem: loopButton
+                Navigation.rightItem: root.Navigation.rightItem
+                Navigation.upItem: trackPositionSlider
+                Navigation.downItem: root.Navigation.downItem
+            }
+        }
         }
     }
 }

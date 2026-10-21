@@ -27,14 +27,21 @@ class ColorSchemeModel : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(QString current READ currentText NOTIFY currentChanged FINAL)
-    Q_PROPERTY(ColorScheme scheme READ currentScheme NOTIFY currentChanged FINAL)
+    Q_PROPERTY(ColorScheme scheme READ currentScheme WRITE setCurrentScheme NOTIFY currentChanged FINAL)
+    Q_PROPERTY(int currentIndex READ currentIndex WRITE setCurrentIndex NOTIFY currentChanged FINAL)
 
 public:
     enum ColorScheme
     {
         System,
         Day,
-        Night
+        Night,
+        Amoled
+    };
+
+    enum Roles
+    {
+        SchemeRole = Qt::UserRole + 1
     };
 
     struct Item
@@ -51,9 +58,11 @@ public:
     Qt::ItemFlags flags (const QModelIndex& index) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
+    QHash<int, QByteArray> roleNames() const override;
 
     int currentIndex() const;
-    void setCurrentIndex(int newIndex);
+    Q_INVOKABLE void setCurrentIndex(int newIndex);
+    Q_INVOKABLE void setCurrentScheme(ColorScheme scheme);
 
     QString currentText() const;
     QVector<Item> getSchemes() const;

@@ -62,7 +62,7 @@ if srt_dep.found()
 	'name' : 'access_output_srt',
 	'sources' : files('srt.c', '../access/srt_common.c'),
 	'include_directories' : include_directories('../access/'),
-	'dependencies' : [srt_dep],
+	'dependencies' : [srt_dep, socket_libs],
     'shortname' : 'a_o_srt',
     'plugin_dir' : 'access_output',
     }

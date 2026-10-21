@@ -83,6 +83,27 @@ static void vlc_kill(void *data)
     ReleaseSemaphore(*semp, 1, NULL);
 }
 
+#ifdef TOP_BUILDDIR
+/* Only the development executable accepts an explicit dependency directory.
+ * Never fall back to searching the current directory or PATH for plug-ins. */
+static void ConfigureDevelopmentDllDirectories(void)
+{
+    AddDllDirectory(L"" TOP_BUILDDIR L"/src");
+    AddDllDirectory(L"" TOP_BUILDDIR L"/lib");
+
+    DWORD length = GetEnvironmentVariableW(L"VLC_DEVELOPMENT_DLL_DIRECTORY", NULL, 0);
+    if (length == 0)
+        return;
+    wchar_t *directory = malloc(length * sizeof(*directory));
+    if (directory == NULL)
+        return;
+    DWORD copied = GetEnvironmentVariableW(L"VLC_DEVELOPMENT_DLL_DIRECTORY", directory, length);
+    if (copied > 0 && copied < length)
+        AddDllDirectory(directory); /* Requires an absolute path. */
+    free(directory);
+}
+#endif
+
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
                     LPSTR lpCmdLine,
                     int nCmdShow )
@@ -96,9 +117,21 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
      * on Windows 2000/XP/2003 an hard-coded language ID list is used. This
      * putenv() call may become redundant with later versions of gettext. */
     putenv("GETTEXT_MUI=1");
+#ifdef VLC_REDESIGN
+    putenv("VLC_DEVELOPMENT_NAME=VLC Redesign");
+    SetCurrentProcessExplicitAppUserModelID(L"org.VideoLAN.VLC.Redesign");
+#endif
 #ifdef TOP_BUILDDIR
-    putenv("VLC_PLUGIN_PATH=Z:"TOP_BUILDDIR"/modules");
-    putenv("VLC_DATA_PATH=Z:"TOP_SRCDIR"/share");
+    if (TOP_BUILDDIR[0] != '\0' && TOP_BUILDDIR[1] == ':')
+    {
+        putenv("VLC_PLUGIN_PATH="TOP_BUILDDIR"/modules");
+        putenv("VLC_DATA_PATH="TOP_SRCDIR"/share");
+    }
+    else
+    {
+        putenv("VLC_PLUGIN_PATH=Z:"TOP_BUILDDIR"/modules");
+        putenv("VLC_DATA_PATH=Z:"TOP_SRCDIR"/share");
+    }
 #endif
 
 #ifndef NDEBUG
@@ -112,14 +145,15 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
     /* Enable DEP */
     SetProcessDEPPolicy(PROCESS_DEP_ENABLE);
 
-    /* Do NOT load any library from cwd. */
-    SetDllDirectory(TEXT(""));
-
-    /***
-     * The LoadLibrary* calls from the modules and the 3rd party code
-     * will search in SYSTEM32 only
-     * */
+    /* Exclude the current directory and PATH from runtime DLL searches. */
+    SetDllDirectoryW(L"");
+#ifdef TOP_BUILDDIR
+    SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_USER_DIRS);
+    ConfigureDevelopmentDllDirectories();
+#else
     SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
+#endif
+
     /***
      * Load DLLs from system32 before any other folder (when possible)
      */
@@ -216,7 +250,11 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,
         HANDLE sem = CreateSemaphore(NULL, 0, 1, NULL);
 
         libvlc_SetExitHandler(vlc->p_libvlc_int, vlc_kill, &sem);
+#ifdef VLC_REDESIGN
+        libvlc_set_app_id (vlc, "org.VideoLAN.VLC.Redesign", PACKAGE_VERSION,
+#else
         libvlc_set_app_id (vlc, "org.VideoLAN.VLC", PACKAGE_VERSION,
+#endif
                            PACKAGE_NAME);
         libvlc_set_user_agent (vlc, "VLC media player", "VLC/"PACKAGE_VERSION);
         libvlc_InternalAddIntf (vlc->p_libvlc_int, NULL);

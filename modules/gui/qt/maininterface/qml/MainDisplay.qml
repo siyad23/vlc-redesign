@@ -95,6 +95,15 @@ FocusScope {
     }
 
     Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Escape) {
+            if (Player.fullscreen || (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)) {
+                Player.fullscreen = false
+                if (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)
+                    MainCtx.setInterfaceFullScreen(false)
+                event.accepted = true
+                return
+            }
+        }
         if (KeyHelper.matchSearch(event)) {
             MainCtx.search.askShow()
             event.accepted = true

@@ -102,7 +102,7 @@ static bool restoreWindowPositionImpl(QSettings *settings, QWindow *window)
     if (geometry.isNull())
         return false;
 
-    bool screenFound = false;
+    QScreen *targetScreen = nullptr;
     for (auto screen: QGuiApplication::screens())
     {
         if (screen->name() == screenName)
@@ -114,23 +114,30 @@ static bool restoreWindowPositionImpl(QSettings *settings, QWindow *window)
                 break;
             }
             window->setScreen(screen);
-            screenFound = true;
+            targetScreen = screen;
             break;
         }
     }
-    if (!screenFound)
+    if (!targetScreen)
         return false;
+
+    const QRect avail = targetScreen->availableGeometry();
+    if (avail.isValid() &&
+        (geometry.width() >= qRound(avail.width() * 0.90) ||
+         geometry.height() >= qRound(avail.height() * 0.90)))
+    {
+        const QSize medSize(qRound(avail.width() * 0.70), qRound(avail.height() * 0.70));
+        geometry = QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, medSize, avail);
+        position = geometry.topLeft();
+    }
 
     window->setPosition(position);
     window->setGeometry(geometry);
 
-    if (maximized || fullscreen)
+    if (maximized)
     {
-        Qt::WindowStates state = window->windowStates();
-        if (maximized)
-            state |= Qt::WindowMaximized;
-        if (fullscreen)
-            state |= Qt::WindowFullScreen;
+        Qt::WindowStates state = window->windowStates() & ~Qt::WindowFullScreen;
+        state |= Qt::WindowMaximized;
         window->setWindowStates(state);
     }
     else
@@ -147,10 +154,19 @@ void QVLCTools::restoreWindowPosition(QSettings *settings, QWindow *window, QSiz
     if (ret)
         return;
 
+    const QRect avail = QGuiApplication::primaryScreen()
+                            ? QGuiApplication::primaryScreen()->availableGeometry()
+                            : QRect(0, 0, 1920, 1080);
+    if (defSize.width() <= 600 && defSize.height() <= 420 && avail.isValid())
+    {
+        defSize = QSize(std::clamp(qRound(avail.width() * 0.70), 600, 1280),
+                        std::clamp(qRound(avail.height() * 0.70), 420, 760));
+    }
+
     window->resize(defSize);
     if (defPos.isNull())
     {
-        window->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, window->size(), QGuiApplication::primaryScreen()->availableGeometry()));
+        window->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, window->size(), avail));
     }
     else
     {

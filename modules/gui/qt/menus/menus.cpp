@@ -49,6 +49,7 @@
 #include "util/varchoicemodel.hpp"
 #include "util/color_scheme_model.hpp"
 #include "util/colorizedsvgicon.hpp"
+#include "style/systempalette.hpp"
 #include "medialibrary/medialib.hpp"
 #include "medialibrary/mlrecentmediamodel.hpp"
 #include "medialibrary/mlbookmarkmodel.hpp"
@@ -59,8 +60,94 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QSignalMapper>
+#include <QStyleFactory>
+#include <QStyle>
+#include <algorithm>
 
 using namespace vlc::playlist;
+
+VLCMenu::VLCMenu(qt_intf_t* p_intf) : QMenu()
+{
+    assert(p_intf);
+    applyTheme(this, p_intf);
+    if (isWindow())
+        QVLCDialog::setWindowTransientParent(this, nullptr, p_intf);
+}
+
+void VLCMenu::applyTheme(QMenu* menu, qt_intf_t* p_intf)
+{
+    if (!p_intf->p_mi || menu->property("vlcMenuTheme").toBool())
+        return;
+    menu->setProperty("vlcMenuTheme", true);
+    menu->setAttribute(Qt::WA_TranslucentBackground);
+    auto style = QStyleFactory::create(QStringLiteral("Fusion"));
+    style->setParent(menu);
+    menu->setStyle(style);
+    auto font = menu->font();
+    font.setPointSizeF(std::max(10.0, font.pointSizeF()));
+    menu->setFont(font);
+
+    auto colors = new SystemPalette(menu);
+    colors->setCtx(p_intf->p_mi);
+    colors->setSource(p_intf->p_mi->getColorScheme()->currentScheme());
+    colors->componentComplete();
+    const auto update = [menu, colors]() {
+        using C = ColorContext;
+        const auto get = [colors](C::ColorSection section, C::ColorName name, C::ColorState state = C::Normal) {
+            return colors->getColor(C::Window, section, name, state);
+        };
+        const auto background = get(C::Bg, C::Primary);
+        const auto foreground = get(C::Fg, C::Primary);
+        const auto border = get(C::Decoration, C::Border);
+        const auto disabled = get(C::Fg, C::Primary, C::Disabled);
+        const auto accent = colors->get_orange500();
+        auto selected = accent;
+        selected.setAlpha(32);
+        auto palette = menu->palette();
+        palette.setColor(QPalette::Window, background);
+        palette.setColor(QPalette::Base, background);
+        palette.setColor(QPalette::WindowText, foreground);
+        palette.setColor(QPalette::Text, foreground);
+        palette.setColor(QPalette::ButtonText, foreground);
+        palette.setColor(QPalette::Highlight, selected);
+        palette.setColor(QPalette::HighlightedText, foreground);
+        palette.setColor(QPalette::Disabled, QPalette::WindowText, disabled);
+        palette.setColor(QPalette::Disabled, QPalette::Text, disabled);
+        menu->setPalette(palette);
+        menu->setStyleSheet(QStringLiteral(R"(
+            QMenu { background: %1; color: %2; border: 1px solid %3;
+                    border-radius: 10px; padding: 6px; }
+            QMenu::item { padding: 8px 30px 8px 30px; border: 1px solid transparent;
+                          border-radius: 6px; min-width: 154px; }
+            QMenu::item:selected { background: %4; color: %2; }
+            QMenu::item:disabled { color: %5; }
+            QMenu::separator { height: 1px; background: %3; margin: 6px 8px; }
+            QMenu::icon { left: 10px; }
+            QMenu::indicator { width: 14px; height: 14px; }
+        )").arg(background.name(QColor::HexArgb), foreground.name(QColor::HexArgb), border.name(QColor::HexArgb),
+                selected.name(QColor::HexArgb), disabled.name(QColor::HexArgb)));
+
+        // Submenus are ordinary QMenus and are often populated lazily. Theme
+        // their windows too, including any added since the previous popup.
+        for (auto child : menu->findChildren<QMenu*>())
+        {
+            child->setAttribute(Qt::WA_TranslucentBackground);
+            child->setPalette(palette);
+            child->setFont(menu->font());
+            if (!child->property("vlcMenuThemeHook").toBool())
+            {
+                child->setProperty("vlcMenuThemeHook", true);
+                QObject::connect(child, &QMenu::aboutToShow, colors, &SystemPalette::componentComplete);
+            }
+        }
+    };
+    QObject::connect(colors, &SystemPalette::paletteChanged, menu, update);
+    QObject::connect(menu, &QMenu::aboutToShow, colors, &SystemPalette::componentComplete);
+    QObject::connect(p_intf->p_mi->getColorScheme(), &ColorSchemeModel::currentChanged, colors, [colors, ctx = p_intf->p_mi]() {
+        colors->setSource(ctx->getColorScheme()->currentScheme());
+    });
+    update();
+}
 
 /*
   This file defines the main menus and the pop-up menu (right-click menu)
@@ -314,6 +401,11 @@ void VLCMenuBar::ViewMenu(qt_intf_t *p_intf, QMenu *menu)
     action->setCheckable( true );
     connect( action, &QAction::triggered, mi->getPlayqueuePanel(), &SidePanelCtx::setDocked );
     action->setChecked( mi->getPlayqueuePanel()->isDocked() );
+
+    action = menu->addAction( qtr( "&Advanced Controls" ) );
+    action->setCheckable( true );
+    action->setChecked( mi->advancedControls() );
+    connect( action, &QAction::toggled, mi, &MainCtx::setAdvancedControls );
 
     menu->addSeparator();
 

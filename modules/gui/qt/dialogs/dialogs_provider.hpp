@@ -74,7 +74,6 @@ class QSignalMapper;
 class VLCMenuBar;
 
 class OpenDialog;
-class FirstRunWizard;
 class ExtendedDialog;
 class MessagesDialog;
 class GotoTimeDialog;
@@ -106,7 +105,6 @@ public:
     Q_ENUM(Mode)
 
     Q_PROPERTY(bool openDialogVisible READ openDialogVisible NOTIFY openDialogVisibleChanged FINAL)
-    Q_PROPERTY(bool firstRunDialogVisible READ firstRunDialogVisible NOTIFY firstRunDialogVisibleChanged FINAL)
     Q_PROPERTY(bool extendedDialogVisible READ extendedDialogVisible NOTIFY extendedDialogVisibleChanged FINAL)
     Q_PROPERTY(bool messagesDialogVisible READ messagesDialogVisible NOTIFY messagesDialogVisibleChanged FINAL)
     Q_PROPERTY(bool gotoTimeDialogVisible READ gotoTimeDialogVisible NOTIFY gotoTimeDialogVisibleChanged FINAL)
@@ -173,7 +171,6 @@ private:
     QPointer<PrefsDialog> m_prefsDialog;
 
     std::unique_ptr<OpenDialog> m_openDialog;
-    std::unique_ptr<FirstRunWizard> m_firstRunDialog;
     std::unique_ptr<ExtendedDialog> m_extendedDialog;
     std::unique_ptr<MessagesDialog> m_messagesDialog;
     std::unique_ptr<GotoTimeDialog> m_gotoTimeDialog;
@@ -216,7 +213,6 @@ public slots:
                                               const QMessageBox::StandardButton defaultButton = QMessageBox::NoButton,
                                               const QMessageBox::Icon icon = QMessageBox::NoIcon);
     void prefsDialog();
-    void firstRunDialog();
     void extendedDialog();
     void synchroDialog();
     void messagesDialog( int page = 0 );
@@ -268,7 +264,6 @@ public:
     void PLAppendDialog( OpenDialog::OpenTab tab = OpenDialog::OPEN_FILE_TAB );
 
     bool openDialogVisible() const;
-    bool firstRunDialogVisible() const;
     bool extendedDialogVisible() const;
     bool messagesDialogVisible() const;
     bool gotoTimeDialogVisible() const;
@@ -291,7 +286,6 @@ signals:
 
     //visiblity signal
     void openDialogVisibleChanged();
-    void firstRunDialogVisibleChanged();
     void extendedDialogVisibleChanged();
     void messagesDialogVisibleChanged();
     void gotoTimeDialogVisibleChanged();

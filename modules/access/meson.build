@@ -543,7 +543,7 @@ libssh2_dep = dependency('libssh2', required: get_option('libssh2'))
 vlc_modules += {
     'name' : 'sftp',
     'sources' : files('sftp.c'),
-    'dependencies' : [libssh2_dep],
+    'dependencies' : [libssh2_dep, socket_libs],
     'plugin_dir' : 'access',
     'enabled': libssh2_dep.found() and get_option('sftp').allowed(),
 }
@@ -674,7 +674,7 @@ if srt_dep.found()
     vlc_modules += {
         'name' : 'access_srt',
         'sources' : files('srt.c', 'srt_common.c'),
-        'dependencies' : [srt_dep],
+        'dependencies' : [srt_dep, socket_libs],
         'shortname' : 'a_srt',
         'plugin_dir' : 'access',
     }

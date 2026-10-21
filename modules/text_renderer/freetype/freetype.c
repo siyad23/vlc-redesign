@@ -173,7 +173,7 @@ vlc_module_begin ()
     add_rgb("freetype-outline-color", 0x00000000, OUTLINE_COLOR_TEXT, NULL)
         change_integer_list( pi_color_values, ppsz_color_descriptions )
         change_safe()
-    add_integer_with_range( "freetype-outline-thickness", 4, 0, 50, OUTLINE_THICKNESS_TEXT,
+    add_integer_with_range( "freetype-outline-thickness", 2, 0, 50, OUTLINE_THICKNESS_TEXT,
              NULL )
         change_integer_list( pi_outline_thickness, ppsz_outline_thickness )
         change_safe()
@@ -756,6 +756,7 @@ static void FillDefaultStyles( filter_t *p_filter )
     p_sys->p_default_style->e_blending_mode = var_InheritInteger( p_filter, "freetype-blending-mode" );
     p_sys->p_default_style->i_features |= STYLE_HAS_BLENDING_MODE;
 
+    p_sys->p_default_style->f_font_relsize = 3.6f;
     p_sys->p_default_style->i_font_size = 0;
     p_sys->p_default_style->i_style_flags |= STYLE_SHADOW;
     p_sys->p_default_style->i_features |= STYLE_HAS_FLAGS;

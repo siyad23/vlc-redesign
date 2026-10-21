@@ -179,6 +179,7 @@ vlc_tests += {
 
 vlc_tests += {
     'name' : 'test_modules_video_output_opengl_filters',
+    'dependencies' : [opengl_dep],
     'sources' : files(
         'video_output/opengl/filters.c',
         '../../modules/video_output/opengl/filters.c',
@@ -199,6 +200,7 @@ vlc_tests += {
 
 vlc_tests += {
     'name' : 'test_modules_video_output_opengl_es2_filters',
+    'dependencies' : [opengles2_dep],
     'sources' : files(
         'video_output/opengl/filters.c',
         '../../modules/video_output/opengl/filters.c',

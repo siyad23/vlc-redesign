@@ -83,6 +83,7 @@ class SPrefsCatList : public QWidget
 public:
     SPrefsCatList( qt_intf_t *, QWidget * );
     virtual ~SPrefsCatList() {}
+    void updateIcons();
 private:
     qt_intf_t *p_intf;
 signals:
@@ -98,6 +99,7 @@ public:
     SPrefsPanel( qt_intf_t *, QWidget *, int );
     virtual ~SPrefsPanel();
     void apply();
+    void updateLayoutPreviews();
 #ifdef _WIN32
     void cleanLang();
 #endif

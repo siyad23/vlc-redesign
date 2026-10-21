@@ -32,6 +32,7 @@
 #include "maininterface/mainctx.hpp"
 #include "util/accessible_compat_attached.hpp"
 #include "util/color_scheme_model.hpp"
+#include "util/colorizedsvgicon.hpp"
 #include "util/proxycolumnmodel.hpp"
 #include "medialibrary/mlrecentmediamodel.hpp"
 
@@ -63,6 +64,7 @@
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QRegularExpression>
+#include <QPainter>
 
 #include <cassert>
 #include <math.h>
@@ -223,53 +225,58 @@ private:
 SPrefsCatList::SPrefsCatList( qt_intf_t *_p_intf, QWidget *_parent ) :
                                   QWidget( _parent ), p_intf( _p_intf )
 {
-    QHBoxLayout *layout = new QHBoxLayout();
+    QVBoxLayout *layout = new QVBoxLayout();
 
     /* Use autoExclusive buttons and a mapper as QButtonGroup can't
        set focus (keys) when it manages the buttons's exclusivity.
        See QT bugs 131 & 816 and QAbstractButton's source code. */
     QSignalMapper *mapper = new QSignalMapper( layout );
     connect( mapper, &QSignalMapper::mappedInt, this, &SPrefsCatList::switchPanel );
-    qreal dpr = devicePixelRatioF();
-
     auto addCategory = [&]( QString label, QString ltooltip, QString icon, int numb) {
-        QToolButton * button = new QToolButton( this );
-        /* Scale icon to non native size outside of toolbutton to avoid widget size */
-        /* computation using native size */
-        QPixmap scaled = QPixmap( icon )
-              .scaledToHeight( ICON_HEIGHT * dpr, Qt::SmoothTransformation );
-        scaled.setDevicePixelRatio( dpr );
-        button->setIcon( scaled );
+        QPushButton * button = new QPushButton( this );
+        button->setObjectName(QStringLiteral("preferenceCategory"));
+        button->setProperty("categoryIcon", icon);
         button->setText( label );
         button->setToolTip( ltooltip );
-        button->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
-        button->setIconSize( QSize( ICON_WIDTH, ICON_HEIGHT ) );
-        button->setMinimumWidth( 40 + ICON_WIDTH );
-        button->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
-        button->setAutoRaise( true );
+        button->setIconSize( QSize(20, 20) );
+        button->setMinimumHeight(44);
+        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        button->setAutoDefault(false);
         button->setCheckable( true );
         button->setAutoExclusive( true );
-        connect( button, &QToolButton::clicked, mapper, QOverload<>::of(&QSignalMapper::map) );
+        connect( button, &QPushButton::clicked, mapper, QOverload<>::of(&QSignalMapper::map) );
         mapper->setMapping( button, numb );
         layout->addWidget( button );
     };
 
-    addCategory( qfut(INTF_TITLE), qfut(INTF_TOOLTIP), ":/prefsmenu/spref_interface.png" , SPrefsInterface );
-    addCategory( qfut(AUDIO_TITLE), qfut(AUDIO_TOOLTIP), ":/prefsmenu/spref_audio.png", SPrefsAudio );
-    addCategory( qfut(VIDEO_TITLE), qfut(VIDEO_TOOLTIP), ":/prefsmenu/spref_video.png", SPrefsVideo );
-    addCategory( qfut(SUBPIC_TITLE), qfut(SUBPIC_TOOLTIP), ":/prefsmenu/spref_subtitles.png", SPrefsSubtitles );
-    addCategory( qfut(INPUT_TITLE), qfut(INPUT_TOOLTIP), ":/prefsmenu/spref_input.png", SPrefsInputAndCodecs );
-    addCategory( qfut(HOTKEYS_TITLE), qfut(HOTKEYS_TOOLTIP), ":/prefsmenu/spref_hotkeys.png", SPrefsHotkeys );
+    addCategory( qfut(INTF_TITLE), qfut(INTF_TOOLTIP), ":/menu/preferences.svg" , SPrefsInterface );
+    addCategory( qfut(AUDIO_TITLE), qfut(AUDIO_TOOLTIP), ":/menu/volume-high.svg", SPrefsAudio );
+    addCategory( qfut(VIDEO_TITLE), qfut(VIDEO_TOOLTIP), ":/menu/movie.svg", SPrefsVideo );
+    addCategory( qfut(SUBPIC_TITLE), qfut(SUBPIC_TOOLTIP), ":/menu/messages.svg", SPrefsSubtitles );
+    addCategory( qfut(INPUT_TITLE), qfut(INPUT_TOOLTIP), ":/menu/folder.svg", SPrefsInputAndCodecs );
+    addCategory( qfut(HOTKEYS_TITLE), qfut(HOTKEYS_TOOLTIP), ":/menu/ic_fluent_options.svg", SPrefsHotkeys );
     if ( vlc_ml_instance_get( p_intf ) != nullptr )
-        addCategory( qfut(ML_TITLE), qfut(ML_TOOLTIP), ":/prefsmenu/spref_medialibrary.png", SPrefsMediaLibrary );
+        addCategory( qfut(ML_TITLE), qfut(ML_TOOLTIP), ":/menu/media_library.svg", SPrefsMediaLibrary );
 
-    qobject_cast<QToolButton*>(mapper->mapping(SPrefsInterface))->setChecked(true);
+    qobject_cast<QPushButton*>(mapper->mapping(SPrefsInterface))->setChecked(true);
+    layout->addStretch();
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing( 1 );
+    layout->setSpacing( 4 );
 
     setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Preferred);
-    setMinimumWidth( ICON_HEIGHT * 6 + 10 );
     setLayout( layout );
+    updateIcons();
+}
+
+void SPrefsCatList::updateIcons()
+{
+    const auto foreground = palette().color(QPalette::WindowText);
+    for (auto button : findChildren<QPushButton*>())
+    {
+        button->setIcon(ColorizedSvgIcon(button->property("categoryIcon").toString(), foreground, foreground,
+                                         palette().color(QPalette::Highlight),
+                                         {{"#ff950d", foreground.name()}, {"#747474", foreground.name()}}));
+    }
 }
 
 void SPrefsCatList::switchPanel( int i )
@@ -369,7 +376,7 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
 
     // Title <hr>
     QFrame *title_line = new QFrame;
-    title_line->setFrameShape(QFrame::HLine);
+    title_line->hide();
     title_line->setFrameShadow(QFrame::Sunken);
 
     QFont italicFont = QApplication::font();
@@ -1027,6 +1034,15 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
             ui.setupUi( panel );
             panel_label->setText( qtr("Media Library Settings") );
 
+            // These used to be 16px icon buttons, smaller than the new button
+            // padding. Give folder actions a usable target and no text padding.
+            for (auto button : {ui.addButton, ui.banButton, ui.reloadButton})
+            {
+                button->setObjectName(QStringLiteral("folderAction"));
+                button->setFixedSize(32, 32);
+                button->setAutoDefault(false);
+            }
+
             if ( vlc_ml_instance_get( p_intf ) != NULL )
             {
                 AccessibleCompatAttached::setId( ui.mlGroupBox, "ml-groupbox" );
@@ -1065,6 +1081,65 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
     panel_layout->addWidget( scroller );
 
     setLayout( panel_layout );
+    updateLayoutPreviews();
+}
+
+void SPrefsPanel::updateLayoutPreviews()
+{
+    if (number != SPrefsInterface)
+        return;
+
+    const auto makePreview = [this](bool pinned) {
+        const QSize size(210, 118);
+        QPixmap preview(size * devicePixelRatioF());
+        preview.setDevicePixelRatio(devicePixelRatioF());
+        preview.fill(Qt::transparent);
+        QPainter painter(&preview);
+        painter.setRenderHint(QPainter::Antialiasing);
+        const auto chrome = palette().color(QPalette::Window);
+        const auto foreground = palette().color(QPalette::WindowText);
+        const auto accent = palette().color(QPalette::Highlight);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(chrome);
+        painter.drawRoundedRect(QRectF(0, 0, size.width(), size.height()), 7, 7);
+        painter.fillRect(QRectF(1, pinned ? 27 : 20, 208, pinned ? 67 : 96), Qt::black);
+        const QPixmap logo(":/logo/vlc256.png");
+        painter.drawPixmap(QRect(8, 3, 15, 15), logo);
+        painter.drawPixmap(QRect(83, 34, 44, 44), logo);
+        QFont font = painter.font();
+        font.setPixelSize(8);
+        painter.setFont(font);
+        painter.setPen(foreground);
+        painter.drawText(QRect(29, 2, 100, 16), Qt::AlignVCenter, QStringLiteral("VLC"));
+        painter.drawText(QRect(175, 2, 28, 16), Qt::AlignCenter, QStringLiteral("\u00b7\u00b7\u00b7"));
+        if (pinned)
+        {
+            font.setPixelSize(6);
+            painter.setFont(font);
+            painter.drawText(QRect(8, 17, 194, 10), Qt::AlignVCenter, qtr("Media   Playback   Audio   Video   View"));
+            painter.fillRect(QRectF(1, 94, 208, 23), chrome);
+        }
+        painter.setPen(QPen(accent, 2));
+        painter.drawLine(9, 96, 200, 96);
+        painter.setBrush(accent);
+        painter.setPen(Qt::NoPen);
+        painter.drawEllipse(QPointF(17, 107), 6, 6);
+        painter.setBrush(palette().color(QPalette::HighlightedText));
+        painter.drawPolygon(QPolygonF{QPointF(16, 104), QPointF(16, 110), QPointF(20, 107)});
+        painter.setPen(QPen(foreground, 1));
+        painter.drawRect(QRectF(32, 104, 5, 5));
+        painter.drawLine(47, 104, 47, 110);
+        painter.drawLine(51, 104, 51, 110);
+        painter.drawLine(165, 107, 190, 107);
+        painter.drawRect(QRectF(197, 104, 5, 5));
+        return QIcon(preview);
+    };
+    m_interfaceUI.modernImage->setIconSize(QSize(210, 118));
+    m_interfaceUI.classicImage->setIconSize(QSize(210, 118));
+    m_interfaceUI.modernImage->setIcon(makePreview(false));
+    m_interfaceUI.classicImage->setIcon(makePreview(true));
+    m_interfaceUI.modernImage->setAccessibleName(qtr("Modern layout preview"));
+    m_interfaceUI.classicImage->setAccessibleName(qtr("Classic layout preview"));
 }
 
 

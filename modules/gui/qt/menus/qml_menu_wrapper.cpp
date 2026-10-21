@@ -274,6 +274,11 @@ void QmlGlobalMenu::popup(QPoint pos)
 
     m_menu = std::make_unique<VLCMenu>(m_ctx->getIntf());
     QMenu* submenu;
+    const auto section = [this](const QString& title, const QString& icon) {
+        auto menu = m_menu->addMenu(title);
+        menu->setIcon(ColorizedSvgIcon::colorizedIconForWidget(icon, m_menu.get()));
+        return menu;
+    };
 
     connect( m_menu.get(), &QMenu::aboutToShow, this, [this]() {
         m_shown = true;
@@ -286,30 +291,30 @@ void QmlGlobalMenu::popup(QPoint pos)
         aboutToHide();
     });
 
-    submenu = m_menu->addMenu(qtr( "&Media" ));
+    submenu = section(qtr("&Media"), QStringLiteral(":/menu/folder.svg"));
     FileMenu( p_intf, submenu );
 
     /* Dynamic menus, rebuilt before being showed */
-    submenu = m_menu->addMenu(qtr( "P&layback" ));
+    submenu = section(qtr("P&layback"), QStringLiteral(":/menu/ic_fluent_play_filled.svg"));
     NavigMenu( p_intf, submenu );
 
-    submenu = m_menu->addMenu(qtr( "&Audio" ));
+    submenu = section(qtr("&Audio"), QStringLiteral(":/menu/volume-high.svg"));
     AudioMenu( p_intf, submenu );
 
-    submenu = m_menu->addMenu(qtr( "&Video" ));
+    submenu = section(qtr("&Video"), QStringLiteral(":/menu/movie.svg"));
     VideoMenu( p_intf, submenu );
 
-    submenu = m_menu->addMenu(qtr( "Subti&tle" ));
+    submenu = section(qtr("Subti&tle"), QStringLiteral(":/menu/messages.svg"));
     SubtitleMenu( p_intf, submenu );
 
-    submenu = m_menu->addMenu(qtr( "Tool&s" ));
+    submenu = section(qtr("Tool&s"), QStringLiteral(":/menu/preferences.svg"));
     ToolsMenu( p_intf, submenu );
 
     /* View menu, a bit different */
-    submenu = m_menu->addMenu(qtr( "V&iew" ));
+    submenu = section(qtr("V&iew"), QStringLiteral(":/menu/ic_fluent_options.svg"));
     ViewMenu( p_intf, submenu );
 
-    submenu = m_menu->addMenu(qtr( "&Help" ));
+    submenu = section(qtr("&Help"), QStringLiteral(":/menu/help.svg"));
     HelpMenu( p_intf, submenu );
 
     m_menu->popup(pos);
@@ -399,6 +404,7 @@ void QmlMenuBar::popupMenuCommon( QQuickItem* button, std::function<void(QMenu*)
         return;
 
     m_menu = std::make_unique<QmlMenuBarMenu>(this);
+    VLCMenu::applyTheme(m_menu.get(), p_intf);
     createMenuFunc(m_menu.get());
     m_button = button;
     m_openMenuOnHover = false;

@@ -32,6 +32,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#ifdef _WIN32
+# include <windows.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -188,21 +191,37 @@ static vlc_plugin_t *module_InitStatic(vlc_plugin_cb entry)
 VLC_WEAK
 extern const vlc_plugin_cb vlc_static_modules[];
 
+static const vlc_plugin_cb *module_GetStaticModules(void)
+{
+    return vlc_static_modules;
+}
+#elif defined(_WIN32)
+static const vlc_plugin_cb *module_GetStaticModules(void)
+{
+    /* PE DLLs cannot weak-link a table supplied by the executable. */
+    return (const vlc_plugin_cb *)(void *)GetProcAddress(GetModuleHandleW(NULL),
+                                                       "vlc_static_modules");
+}
+#else
+static const vlc_plugin_cb *module_GetStaticModules(void)
+{
+    return NULL;
+}
+#endif
+
 static void module_InitStaticModules(void)
 {
-    if (!vlc_static_modules)
+    const vlc_plugin_cb *entries = module_GetStaticModules();
+    if (entries == NULL)
         return;
 
-    for (unsigned i = 0; vlc_static_modules[i]; i++)
+    for (unsigned i = 0; entries[i]; i++)
     {
-        vlc_plugin_t *lib = module_InitStatic(vlc_static_modules[i]);
+        vlc_plugin_t *lib = module_InitStatic(entries[i]);
         if (likely(lib != NULL))
             vlc_plugin_store(lib);
     }
 }
-#else
-static void module_InitStaticModules(void) { }
-#endif
 
 #ifdef HAVE_DYNAMIC_PLUGINS
 static const char *module_GetVersion(void *handle)

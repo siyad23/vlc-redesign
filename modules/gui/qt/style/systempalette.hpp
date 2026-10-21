@@ -109,6 +109,9 @@ public:
     Q_PROPERTY(bool isDark MEMBER m_isDark NOTIFY paletteChanged FINAL)
     Q_PROPERTY(bool hasCSDImage READ hasCSDImage NOTIFY hasCSDImageChanged FINAL)
     Q_PROPERTY(CSDMetrics* csdMetrics READ getCSDMetrics NOTIFY CSDMetricsChanged FINAL)
+    Q_PROPERTY(QString accentColor READ accentColor WRITE setAccentColor NOTIFY accentColorChanged FINAL)
+    Q_PROPERTY(QVariantList accentSwatches READ accentSwatches CONSTANT FINAL)
+    Q_PROPERTY(QColor accent READ get_orange500 NOTIFY paletteChanged FINAL)
 
     //standard color definitions used by light/dark themes
     COLOR_DEFINITION(orange500, "#FF8800");
@@ -145,6 +148,9 @@ public:
     inline MainCtx* getCtx() const { return m_ctx; }
     bool hasCSDImage() const;
 
+    QString accentColor() const { return m_accentColor; }
+    QVariantList accentSwatches() const;
+
     void setColor(ColorContext::ColorSet colorSet,  ColorContext::ColorSection section,
                   ColorContext::ColorName name, ColorContext::ColorState state, QColor color);
     QColor getColor(ColorContext::ColorSet colorSet,  ColorContext::ColorSection section,
@@ -156,6 +162,7 @@ public:
 public slots:
     void setSource(ColorSchemeModel::ColorScheme source);
     void setCtx(MainCtx* ctx);
+    void setAccentColor(const QString& accentColor);
 
 
 signals:
@@ -164,18 +171,22 @@ signals:
     void hasCSDImageChanged();
     void ctxChanged();
     void CSDMetricsChanged();
+    void accentColorChanged();
 
 private:
+    void applyAccentColor(const QString& accentColor);
     void updatePalette();
 
     void makeLightPalette();
     void makeDarkPalette();
+    void makeAmoledPalette();
     void makeSystemPalette();
 
 private:
     MainCtx* m_ctx = nullptr;
 
     ColorSchemeModel::ColorScheme m_source = ColorSchemeModel::ColorScheme::Day;
+    QString m_accentColor = QStringLiteral("default");
     bool m_isDark = false;
     bool m_hasCSDImage = false;
 

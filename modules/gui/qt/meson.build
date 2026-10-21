@@ -44,7 +44,6 @@ moc_headers = files(
     'dialogs/extensions/extensions_manager.hpp',
     'dialogs/fingerprint/chromaprint.hpp',
     'dialogs/fingerprint/fingerprintdialog.hpp',
-    'dialogs/firstrun/firstrunwizard.hpp',
     'dialogs/gototime/gototime.hpp',
     'dialogs/help/aboutmodel.hpp',
     'dialogs/help/help.hpp',
@@ -232,8 +231,6 @@ qt_plugin_sources = files(
     'dialogs/fingerprint/chromaprint.hpp',
     'dialogs/fingerprint/fingerprintdialog.cpp',
     'dialogs/fingerprint/fingerprintdialog.hpp',
-    'dialogs/firstrun/firstrunwizard.cpp',
-    'dialogs/firstrun/firstrunwizard.hpp',
     'dialogs/gototime/gototime.cpp',
     'dialogs/gototime/gototime.hpp',
     'dialogs/help/aboutmodel.hpp',
@@ -581,7 +578,6 @@ ui_sources = files(
     'dialogs/extended/equalizer.ui',
     'dialogs/extended/video_effects.ui',
     'dialogs/fingerprint/fingerprintdialog.ui',
-    'dialogs/firstrun/firstrunwizard.ui',
     'dialogs/help/about.ui',
     'dialogs/help/update.ui',
     'dialogs/messages/messages_panel.ui',
@@ -641,6 +637,7 @@ qml_modules += {
         'maininterface/qml/MainViewLoader.qml',
         'maininterface/qml/MainDisplay.qml',
         'maininterface/qml/NoMedialibHome.qml',
+        'maininterface/qml/OnboardingWizard.qml',
         'maininterface/qml/OpenFileSplitButton.qml',
         qml_maininterface_extra_files,
         'maininterface/qml/SideNavigationPane.qml',
@@ -1091,6 +1088,7 @@ if qt6_dep.found()
         qt_extra_deps += [
             cc.find_library('dwmapi'),
             cc.find_library('comctl32'),
+            cc.find_library('winmm'),
         ]
     endif
 

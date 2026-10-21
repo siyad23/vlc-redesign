@@ -76,6 +76,7 @@ FocusScope{
     signal togglePlaylistVisibility()
     signal requestLockUnlockAutoHide(bool lock)
     signal backRequested()
+    signal userActivity()
 
     ///incomming signal to request all menu and popup to close
     signal forceUnlock()
@@ -231,7 +232,7 @@ FocusScope{
         visible: root.showToolbar
         enabled: root.showToolbar
 
-        onHoveredChanged: menu => root.requestLockUnlockAutoHide(hovered)
+        onHoveredChanged: root.userActivity()
         onMenuOpenedChanged: menu => root.requestLockUnlockAutoHide(menuOpened)
         onImplicitHeightChanged: root._layout()
     }
@@ -290,8 +291,7 @@ FocusScope{
                 Navigation.parentItem: root
                 Navigation.rightItem: menuSelector
                 onClicked: root.backRequested()
-
-                onHoveredChanged: root.requestLockUnlockAutoHide(hovered)
+                onHoveredChanged: root.userActivity()
             }
 
             Widgets.BannerCone {
@@ -416,7 +416,7 @@ FocusScope{
         Connections {
             target: csdDecorations.item
             enabled: csdDecorations.status === Loader.Ready
-            function onButtonHoveredChanged() { root.requestLockUnlockAutoHide(csdDecorations.item.buttonHovered) }
+            function onButtonHoveredChanged() { root.userActivity() }
         }
     }
 
@@ -459,7 +459,7 @@ FocusScope{
 
             onClicked: contextMenu.popup(this.mapToGlobal(0, height))
 
-            onHoveredChanged: root.requestLockUnlockAutoHide(hovered)
+            onHoveredChanged: root.userActivity()
 
             Menus.QmlGlobalMenu {
                 id: contextMenu
@@ -504,7 +504,11 @@ FocusScope{
 
             Accessible.onToggleAction:togglePlaylistVisibility()
 
-            onHoveredChanged: root.requestLockUnlockAutoHide(hovered)
+            onHoveredChanged: root.userActivity()
         }
+    }
+
+    HoverHandler {
+        onPointChanged: root.userActivity()
     }
 }

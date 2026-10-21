@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--sources", action='append', default=[], nargs='*', metavar=("CLASS"), help="mark CLASS as a singleton")
 
     args = parser.parse_args()
-    prefix = os.path.join("/", args.prefix, *args.module.split("."))
+    prefix = os.path.join("/", args.prefix, *args.module.split(".")).replace("\\", "/")
     singletons = [os.path.join(args.srcdir, s) for s in args.singletons[0]]
     files = [os.path.join(args.srcdir, relpath) for relpath in args.sources[0]]
 

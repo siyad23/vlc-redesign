@@ -42,6 +42,7 @@ int main(int argc, char **argv)
 
     //run tests offscreen as the CI doesn't have a desktop environment
     qputenv("QT_QPA_PLATFORM", "offscreen");
+    qputenv("QT_QUICK_BACKEND", "software");
     Setup setup;
     return quick_test_main_with_setup(argc, argv, "qml_test", QUICK_TEST_SOURCE_DIR, &setup);
 }

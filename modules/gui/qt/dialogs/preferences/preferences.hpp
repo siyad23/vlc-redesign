@@ -38,6 +38,7 @@ class QCheckBox;
 class SearchLineEdit;
 class QStackedWidget;
 class QSplitter;
+class SystemPalette;
 
 class PrefsDialog : public QVLCDialog
 {
@@ -47,6 +48,9 @@ public:
     virtual ~PrefsDialog();
 
 private:
+    void updateAppearance();
+    SystemPalette *m_palette;
+
     size_t count;
     module_t **p_list;
 

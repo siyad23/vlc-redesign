@@ -190,8 +190,14 @@ void CSDButtonModel::minimizeButtonClicked()
 
 void CSDButtonModel::maximizeRestoreButtonClicked()
 {
-    const auto visibility = m_mainCtx->intfMainWindow()->visibility();
-    if (visibility == QWindow::Maximized)
+    QWindow *window = m_mainCtx->intfMainWindow();
+    if (!window)
+        return;
+    const auto visibility = window->visibility();
+    const auto states = window->windowStates();
+    if (visibility == QWindow::Maximized ||
+        visibility == QWindow::FullScreen ||
+        (states & (Qt::WindowMaximized | Qt::WindowFullScreen)))
         emit m_mainCtx->requestInterfaceNormal();
     else
         emit m_mainCtx->requestInterfaceMaximized();

@@ -56,11 +56,40 @@ FocusScope {
 
     // Private
 
-    property bool _controlsUnderVideo: (MainCtx.pinVideoControls
-                                        &&
-                                        (MainCtx.intfMainWindow.visibility !== Window.FullScreen))
+    property bool _controlsUnderVideo: MainCtx.pinVideoControls
+                                      && MainCtx.intfMainWindow.visibility !== Window.FullScreen
 
     property bool _keyPressed: false
+    property double _lastFullscreenToggleTime: 0
+
+    function toggleFullscreen() {
+        var now = Date.now()
+        if (now - _lastFullscreenToggleTime < 350)
+            return
+        _lastFullscreenToggleTime = now
+
+        if (Player.fullscreen || (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)) {
+            Player.fullscreen = false
+            if (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)
+                MainCtx.setInterfaceFullScreen(false)
+        } else {
+            Player.fullscreen = true
+        }
+    }
+
+    function exitFullscreen() {
+        if (Player.fullscreen || (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)) {
+            Player.fullscreen = false
+            if (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)
+                MainCtx.setInterfaceFullScreen(false)
+            return true
+        }
+        return false
+    }
+
+    Navigation.cancelAction: function() {
+        rootPlayer.exitFullscreen()
+    }
 
     // Settings
 
@@ -75,6 +104,13 @@ FocusScope {
 
     Keys.priority: Keys.AfterItem
     Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Escape) {
+            if (rootPlayer.exitFullscreen()) {
+                event.accepted = true
+                return
+            }
+        }
+
         if (event.accepted)
             return
 
@@ -96,9 +132,7 @@ FocusScope {
         rootPlayer.Navigation.defaultKeyReleaseAction(event)
     }
 
-    on_ControlsUnderVideoChanged: {
-        lockUnlockAutoHide(_controlsUnderVideo)
-    }
+    on_ControlsUnderVideoChanged: lockUnlockAutoHide(_controlsUnderVideo)
 
     // Functions
 
@@ -287,7 +321,19 @@ FocusScope {
                         mouseMoved.connect(videoSurface.onMouseEvent)
                         mousePressed.connect(videoSurface.onMouseEvent)
                         mouseReleased.connect(videoSurface.onMouseEvent)
-                        mouseDblClicked.connect(videoSurface.onMouseEvent)
+                        mouseDblClicked.connect(function(button) {
+                            videoSurface.onMouseEvent()
+                            if (button === 0)
+                                rootPlayer.toggleFullscreen()
+                        })
+                    }
+
+                    TapHandler {
+                        acceptedButtons: Qt.LeftButton
+                        gesturePolicy: TapHandler.WithinBounds
+                        onDoubleTapped: {
+                            rootPlayer.toggleFullscreen()
+                        }
                     }
 
                     Binding on cursorShape {
@@ -470,6 +516,10 @@ FocusScope {
                     onWheel: (wheel) => {
                         wheel.accepted = true
                         wheelToVlc.qmlWheelEvent(wheel)
+                    }
+
+                    onDoubleClicked: {
+                        rootPlayer.toggleFullscreen()
                     }
 
                     TouchDragHandler {
@@ -988,6 +1038,11 @@ FocusScope {
             value: (playerToolbarVisibilityFSM.isVisible || rootPlayer._controlsUnderVideo) ? "visible" : "hidden"
         }
 
+        onUserActivity: {
+            if (MainCtx.hasEmbededVideo)
+                playerToolbarVisibilityFSM.mouseMove()
+        }
+
         onTogglePlaylistVisibility: playlistVisibility.togglePlaylistVisibility()
 
         onRequestLockUnlockAutoHide: (lock) => {
@@ -1331,7 +1386,14 @@ FocusScope {
         identifier: (Player.hasVideoOutput) ? PlayerControlbarModel.Videoplayer
                                             : PlayerControlbarModel.Audioplayer
 
-        onHoveredChanged: rootPlayer.lockUnlockAutoHide(hovered)
+        onIsInteractingChanged: rootPlayer.lockUnlockAutoHide(controlBar.isInteracting)
+
+        HoverHandler {
+            onPointChanged: {
+                if (MainCtx.hasEmbededVideo)
+                    playerToolbarVisibilityFSM.mouseMove()
+            }
+        }
 
         background: Rectangle {
             id: controlBarBackground

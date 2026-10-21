@@ -37,7 +37,9 @@ void setWindowState(QWindow *window, Qt::WindowState state)
     // in underlying platform window but we need this in top level
     // so that our window handling code works.
     // see issue #28071
-    const auto original = window->windowStates();
+    Qt::WindowStates original = window->windowStates();
+    if (state == Qt::WindowMaximized)
+        original &= ~(Qt::WindowFullScreen | Qt::WindowMinimized);
     window->setWindowStates(original | state);
 }
 
@@ -60,7 +62,7 @@ InterfaceWindowHandler::InterfaceWindowHandler(qt_intf_t *_p_intf, MainCtx* main
     assert(m_window);
     assert(m_mainCtx);
 
-    if (m_mainCtx->useClientSideDecoration())
+    if (m_mainCtx->useClientSideDecoration() && !m_mainCtx->platformHandlesResizeWithCSD())
         m_window->setFlag(Qt::FramelessWindowHint);
 
     /* */
@@ -69,7 +71,9 @@ InterfaceWindowHandler::InterfaceWindowHandler(qt_intf_t *_p_intf, MainCtx* main
     m_window->setIcon( QApplication::windowIcon() );
     m_window->setOpacity( var_InheritFloat( p_intf, "qt-opacity" ) );
 
-    QVLCTools::restoreWindowPosition( getSettings(), m_window, QSize(600, 420) );
+    QVLCTools::restoreWindowPosition( getSettings(), m_window, QSize(1120, 700) );
+    if ((m_window->windowStates() & (Qt::WindowMaximized | Qt::WindowFullScreen | Qt::WindowMinimized)) == 0)
+        m_interfaceGeometry = m_window->geometry();
 
     // this needs to be called asynchronously
     // otherwise QQuickWidget won't initialize properly
@@ -188,13 +192,34 @@ InterfaceWindowHandler::~InterfaceWindowHandler()
 
 void InterfaceWindowHandler::updateCSDWindowSettings()
 {
-    m_window->setFlag(Qt::FramelessWindowHint, m_mainCtx->useClientSideDecoration());
+    m_window->setFlag(Qt::FramelessWindowHint, m_mainCtx->useClientSideDecoration()
+                     && !m_mainCtx->platformHandlesResizeWithCSD());
 }
 
 bool InterfaceWindowHandler::eventFilter(QObject*, QEvent* event)
 {
     switch ( event->type() )
     {
+    case QEvent::Move:
+    case QEvent::Resize:
+    {
+        if ((m_window->windowStates() & (Qt::WindowMaximized | Qt::WindowFullScreen | Qt::WindowMinimized)) == 0 &&
+            m_window->property("__windowFullScreen").toUInt() == 0)
+        {
+            if (QScreen *scr = m_window->screen())
+            {
+                const QRect avail = scr->availableGeometry();
+                const QRect geom = m_window->geometry();
+                if (avail.isValid() && geom.width() >= m_window->minimumWidth() &&
+                    geom.width() < qRound(avail.width() * 0.90) &&
+                    geom.height() < qRound(avail.height() * 0.90))
+                {
+                    m_interfaceGeometry = geom;
+                }
+            }
+        }
+        break;
+    }
     case QEvent::WindowStateChange:
     {
         QWindowStateChangeEvent *windowStateChangeEvent = static_cast<QWindowStateChangeEvent*>(event);
@@ -210,15 +235,43 @@ bool InterfaceWindowHandler::eventFilter(QObject*, QEvent* event)
             m_maximizedView = true;
 
         if( !( newState & Qt::WindowMaximized ) &&
-            oldState & Qt::WindowMaximized ) //FIXME && !b_videoFullScreen )
+            oldState & Qt::WindowMaximized &&
+            !( newState & Qt::WindowFullScreen ) &&
+            m_window->property("__windowFullScreen").toUInt() == 0 )
             m_maximizedView = false;
 
         if( !( newState & Qt::WindowFullScreen ) &&
-            oldState & Qt::WindowFullScreen &&
-            m_maximizedView )
+            oldState & Qt::WindowFullScreen )
         {
-            setInterfaceMaximized();
-            return false;
+            if ( m_maximizedView )
+            {
+                setInterfaceMaximized();
+                return false;
+            }
+            else if ( !( newState & Qt::WindowMaximized ) )
+            {
+                if ( QScreen *scr = m_window->screen() )
+                {
+                    const QRect avail = scr->availableGeometry();
+                    if ( avail.isValid() &&
+                         ( m_window->width() >= qRound(avail.width() * 0.90) ||
+                           m_window->height() >= qRound(avail.height() * 0.90) ) )
+                    {
+                        QRect target = m_interfaceGeometry;
+                        if ( !target.isValid() ||
+                             target.width() >= qRound(avail.width() * 0.90) ||
+                             target.height() >= qRound(avail.height() * 0.90) )
+                        {
+                            const int tw = std::max(m_window->minimumWidth(), qRound(avail.width() * 0.70));
+                            const int th = std::max(m_window->minimumHeight(), qRound(avail.height() * 0.70));
+                            target = QRect(avail.x() + (avail.width() - tw) / 2,
+                                           avail.y() + (avail.height() - th) / 2,
+                                           tw, th);
+                        }
+                        m_window->setGeometry(target);
+                    }
+                }
+            }
         }
 
         if( newState & Qt::WindowMinimized )
@@ -246,6 +299,21 @@ bool InterfaceWindowHandler::eventFilter(QObject*, QEvent* event)
     case QEvent::KeyPress:
     {
         QKeyEvent * keyEvent = static_cast<QKeyEvent *> (event);
+
+        if ( keyEvent->key() == Qt::Key_Escape )
+        {
+            if ( (m_window && (m_window->windowStates() & Qt::WindowFullScreen)) ||
+                 (m_window && m_window->property("__windowFullScreen").toUInt() != 0) ||
+                 THEMIM->isFullscreen() )
+            {
+                WindowStateHolder::holdFullscreen(m_window, WindowStateHolder::INTERFACE, false);
+                WindowStateHolder::holdFullscreen(m_window, WindowStateHolder::VIDEO, false);
+                if (THEMIM->isFullscreen())
+                    THEMIM->setFullscreen(false);
+                keyEvent->accept();
+                return true;
+            }
+        }
 
         /* easter eggs sequence handling */
         if ( keyEvent->key() == kc[ i_kc_offset ] )
@@ -481,12 +549,55 @@ void InterfaceWindowHandler::setInterfaceMinimized()
 
 void InterfaceWindowHandler::setInterfaceMaximized()
 {
+    if ((m_window->windowStates() & Qt::WindowFullScreen) ||
+        m_window->property("__windowFullScreen").toUInt() != 0)
+    {
+        WindowStateHolder::holdFullscreen(m_window, WindowStateHolder::INTERFACE, false);
+        WindowStateHolder::holdFullscreen(m_window, WindowStateHolder::VIDEO, false);
+        if (THEMIM->isFullscreen())
+            THEMIM->setFullscreen(false);
+    }
+    m_maximizedView = true;
     setWindowState(m_window, Qt::WindowMaximized);
 }
 
 void InterfaceWindowHandler::setInterfaceNormal()
 {
+    m_maximizedView = false;
+    if ((m_window->windowStates() & Qt::WindowFullScreen) ||
+        m_window->property("__windowFullScreen").toUInt() != 0 ||
+        THEMIM->isFullscreen())
+    {
+        WindowStateHolder::holdFullscreen(m_window, WindowStateHolder::INTERFACE, false);
+        WindowStateHolder::holdFullscreen(m_window, WindowStateHolder::VIDEO, false);
+        if (THEMIM->isFullscreen())
+            THEMIM->setFullscreen(false);
+    }
+
     m_window->showNormal();
+    m_window->setWindowStates(m_window->windowStates() & ~(Qt::WindowMaximized | Qt::WindowFullScreen | Qt::WindowMinimized));
+
+    if (QScreen *scr = m_window->screen())
+    {
+        const QRect avail = scr->availableGeometry();
+        if (avail.isValid() &&
+            (m_window->width() >= qRound(avail.width() * 0.90) ||
+             m_window->height() >= qRound(avail.height() * 0.90)))
+        {
+            QRect target = m_interfaceGeometry;
+            if (!target.isValid() ||
+                target.width() >= qRound(avail.width() * 0.90) ||
+                target.height() >= qRound(avail.height() * 0.90))
+            {
+                const int tw = std::max(m_window->minimumWidth(), qRound(avail.width() * 0.70));
+                const int th = std::max(m_window->minimumHeight(), qRound(avail.height() * 0.70));
+                target = QRect(avail.x() + (avail.width() - tw) / 2,
+                               avail.y() + (avail.height() - th) / 2,
+                               tw, th);
+            }
+            m_window->setGeometry(target);
+        }
+    }
 }
 
 

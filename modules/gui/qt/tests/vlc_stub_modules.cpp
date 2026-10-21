@@ -41,6 +41,10 @@
 
 
 #include "vlc_stub_modules.hpp"
+#ifdef _WIN32
+# include <windows.h>
+# include <QLibraryInfo>
+#endif
 
 static VLCTestingEnv* testenv = nullptr;
 
@@ -184,13 +188,21 @@ VLCTestingEnv::~VLCTestingEnv()
 }
 
 static const char * test_defaults_args[] = {
-    "-v", "--vout=vdummy", "--aout=adummy", "--text-renderer=tdummy", "--media-library"
+    "-v", "--ignore-config", "--no-auto-preparse", "--no-metadata-network-access",
+    "--vout=vdummy", "--aout=adummy", "--text-renderer=tdummy", "--media-library"
 };
 
 static const int test_defaults_nargs = ARRAY_SIZE(test_defaults_args);
 
 bool VLCTestingEnv::init()
 {
+#ifdef _WIN32
+    // Match the development player's restricted dependency search policy.
+    static const auto qtDllDirectory = AddDllDirectory(
+        reinterpret_cast<LPCWSTR>(QLibraryInfo::path(QLibraryInfo::BinariesPath).utf16()));
+    if (qtDllDirectory == nullptr)
+        return false;
+#endif
     //see test/libvlc/test.h
     QByteArray alarm_timeout = qgetenv("VLC_TEST_TIMEOUT");
     bool has_timeout;
@@ -205,6 +217,7 @@ bool VLCTestingEnv::init()
 
     setenv("VLC_PLUGIN_PATH", TOP_BUILDDIR"/modules", 1);
     setenv("VLC_LIB_PATH", TOP_BUILDDIR"/modules", 1);
+    setenv("VLC_LIBEXEC_PATH", TOP_BUILDDIR"/bin", 1);
 
     libvlc = libvlc_new(test_defaults_nargs, test_defaults_args);
     if (!libvlc)

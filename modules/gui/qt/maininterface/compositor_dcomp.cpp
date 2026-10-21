@@ -37,7 +37,7 @@
 #include <QtGui/private/qrhid3d11_p.h>
 #endif
 
-#if __has_include(<d3d12.h>) && __has_include(<d3d12sdklayers.h>)
+#if __has_include(<d3d12.h>) && __has_include(<d3d12sdklayers.h>) && __has_include(<D3D12MemAlloc.h>)
 #include <QtGui/private/qrhid3d12_p.h>
 #ifdef QRHI_D3D12_AVAILABLE
 #define QRhiD3D12_ACTIVE
@@ -55,6 +55,21 @@
 #include <type_traits>
 
 namespace vlc {
+
+namespace {
+template <typename T>
+auto resolveRhiImpl(T* rhiPtr, int) -> decltype(rhiPtr->implementation())
+{
+    return rhiPtr->implementation();
+}
+
+template <typename T>
+QRhiImplementation* resolveRhiImpl(T* rhiPtr, long)
+{
+    static_assert(sizeof(T) == sizeof(QRhiImplementation*), "Unexpected QRhi layout");
+    return *reinterpret_cast<QRhiImplementation* const*>(rhiPtr);
+}
+}
 
 int CompositorDirectComposition::windowEnable(const vlc_window_cfg_t *)
 {
@@ -201,7 +216,7 @@ bool CompositorDirectComposition::setup()
     const auto rhi = m_quickView->rhi();
     assert(rhi);
 
-    QRhiImplementation* const rhiImplementation = rhi->implementation();
+    QRhiImplementation* const rhiImplementation = resolveRhiImpl(rhi, 0);
     assert(rhiImplementation);
     QRhiSwapChain* const rhiSwapChain = m_quickView->swapChain();
     assert(rhiSwapChain);
@@ -375,9 +390,15 @@ void CompositorDirectComposition::onSurfacePositionChanged(const QPointF& positi
     //          and position changes are applied.
 }
 
-void CompositorDirectComposition::onSurfaceSizeChanged(const QSizeF&)
+void CompositorDirectComposition::onSurfaceSizeChanged(const QSizeF& size)
 {
-    //N/A
+    assert(m_videoVisual);
+
+    // The video swapchain is resized asynchronously by the vout. Until its
+    // next frame arrives, keep the old content inside the current QML hole.
+    const D2D_RECT_F clip = {0.0f, 0.0f, float(size.width()), float(size.height())};
+    m_videoVisual->SetClip(clip);
+    // Committed together with the position by commitSurface().
 }
 
 void CompositorDirectComposition::destroyMainInterface()

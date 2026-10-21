@@ -1273,7 +1273,8 @@ static void *Thread( void *obj )
     }
 #endif
 
-    app.setApplicationDisplayName( qtr("VLC media player") );
+    const QString developmentName = qEnvironmentVariable("VLC_DEVELOPMENT_NAME");
+    app.setApplicationDisplayName(developmentName.isEmpty() ? qtr("VLC media player") : developmentName);
     app.setApplicationVersion( QString::fromUtf8(VERSION_MESSAGE) );
 
     if( QDate::currentDate().dayOfYear() >= QT_XMAS_JOKE_DAY && var_InheritBool( p_intf, "qt-icon-change" ) )

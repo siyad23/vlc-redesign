@@ -236,7 +236,7 @@ static HRESULT Play(aout_stream_t *s, block_t *block, vlc_tick_t date)
     if (sys->first_pts == VLC_TICK_INVALID)
         sys->first_pts = block->i_pts;
 
-    if (sys->chans_to_reorder)
+    if (sys->chans_to_reorder && date != VLC_TICK_INVALID)
         aout_ChannelReorder(block->p_buffer, block->i_buffer,
                           sys->chans_to_reorder, sys->chans_table, sys->format);
 

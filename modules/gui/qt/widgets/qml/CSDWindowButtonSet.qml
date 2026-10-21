@@ -86,12 +86,12 @@ Row {
                 case CSDButton.MaximizeRestore:
                 {
                     if (useWinIcons)
-                        return (MainCtx.intfMainWindow.visibility === Window.Maximized)
+                        return (MainCtx.intfMainWindow.visibility === Window.Maximized || MainCtx.intfMainWindow.visibility === Window.FullScreen)
                                 ? "\uE923"
                                 : "\uE922"
 
                     else
-                        return (MainCtx.intfMainWindow.visibility === Window.Maximized)
+                        return (MainCtx.intfMainWindow.visibility === Window.Maximized || MainCtx.intfMainWindow.visibility === Window.FullScreen)
                                 ? VLCIcons.window_restore
                                 : VLCIcons.window_maximize
                 }
@@ -110,9 +110,23 @@ Row {
 
             onClicked: modelData.click()
 
+            Component.onCompleted: Qt.callLater(updateRect)
+            onXChanged: Qt.callLater(updateRect)
+            onYChanged: Qt.callLater(updateRect)
             // handles VLCStyle.scale changes
             onWidthChanged: Qt.callLater(updateRect)
             onHeightChanged: Qt.callLater(updateRect)
+            onVisibleChanged: Qt.callLater(updateRect)
+
+            Connections {
+                target: windowButtonGroup
+
+                function onXChanged() { Qt.callLater(updateRect) }
+                function onYChanged() { Qt.callLater(updateRect) }
+                function onWidthChanged() { Qt.callLater(updateRect) }
+                function onHeightChanged() { Qt.callLater(updateRect) }
+                function onVisibleChanged() { Qt.callLater(updateRect) }
+            }
 
             Connections {
                 target: VLCStyle
@@ -123,6 +137,8 @@ Row {
             }
 
             function updateRect() {
+                if (!visible || !windowButtonGroup.visible)
+                    return
                 const point = mapToItem(null, 0, 0)
                 const rect = Qt.rect(point.x, point.y, width, height)
 

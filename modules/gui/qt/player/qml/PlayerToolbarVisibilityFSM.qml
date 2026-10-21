@@ -71,6 +71,7 @@ FSM {
         lock: fsm.lock,
         timeout: fsm.timeout,
         unlock: fsm.unlock,
+        forceUnlock: fsm.forceUnlock,
         updateVideoEmbed: fsm.updateVideoEmbed,
     })
  
@@ -93,7 +94,7 @@ FSM {
  
             FSMState {
                 id: fsmAudioMode
- 
+
                 transitions: ({
                     updateVideoEmbed: {
                         guard: () => MainCtx.hasEmbededVideo,
@@ -130,14 +131,14 @@ FSM {
                     mouseMove: {
                         guard: () => !Player.isInteractive,
                         action: () => { 
-                            fsm.timeoutDuration = MainCtx.mouseHideTimeout;
+                            fsm.timeoutDuration = Math.max(2000, MainCtx.mouseHideTimeout);
                         },
                         target: fsmVideoMode
                     },
                     keyboardMove: {
                         guard: () => !Player.isInteractive,
                         action: () => { 
-                            fsm.timeoutDuration = MainCtx.mouseHideTimeout * 2
+                            fsm.timeoutDuration = Math.max(3000, MainCtx.mouseHideTimeout * 2);
                         },
                         target: fsmVideoMode
                     }
@@ -153,14 +154,17 @@ FSM {
                     action: () => { fsm.lockCount++; }
                 },
                 unlock: [{
-                    action: () => { fsm.lockCount--; },
-                    guard: () => fsm.lockCount === 1,
+                    action: () => { fsm.lockCount = Math.max(0, fsm.lockCount - 1); },
+                    guard: () => fsm.lockCount <= 1,
                     target: fsmNormalVisible,
                 }, {
                     guard: () => fsm.lockCount > 1,
                     action: () => { fsm.lockCount--; }
                 }],
-
+                forceUnlock: {
+                    action: () => { fsm.lockCount = 0; },
+                    target: fsmNormalVisible
+                }
             })
         }
     }
@@ -177,14 +181,14 @@ FSM {
             mouseMove: {
                 guard: () => !Player.isInteractive,
                 action: () => {
-                    fsm.timeoutDuration = MainCtx.mouseHideTimeout
+                    fsm.timeoutDuration = Math.max(2000, MainCtx.mouseHideTimeout);
                 },
                 target: fsmVisible
             },
             keyboardMove: {
                 guard: () => !Player.isInteractive,
                 action: () => {
-                    fsm.timeoutDuration = MainCtx.mouseHideTimeout * 2
+                    fsm.timeoutDuration = Math.max(3000, MainCtx.mouseHideTimeout * 2);
                 },
                 target: fsmVisible
             },

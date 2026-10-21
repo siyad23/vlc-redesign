@@ -127,10 +127,11 @@ public:
     {
         assert(m_mainCtx);
 
+        QApplication::instance()->installNativeEventFilter(this);
+
         // CSDWin32EventHandler does not support Qt::FramelessWindowHint:
         m_window->setFlag(Qt::FramelessWindowHint, false);
 
-        QApplication::instance()->installNativeEventFilter(this);
         updateCSDSettings();
     }
 
@@ -186,6 +187,9 @@ public:
         if ( !m_useClientSideDecoration || (msg->hwnd != WinId(m_window)) )
             return false;
 
+        const bool isFullScreen = (m_window->windowStates() & Qt::WindowFullScreen) ||
+                                  (m_window->property("__windowFullScreen").toInt() != 0);
+
         switch ( msg->message )
         {
         case WM_SHOWWINDOW:
@@ -203,17 +207,17 @@ public:
 
             if (!msg->wParam)
             {
-                *result = 0;
+                if (result)
+                    *result = 0;
                 return true;
             }
 
 
-            bool nonClientAreaExists = false;
             const auto clientRect = &(reinterpret_cast<LPNCCALCSIZE_PARAMS>(msg->lParam)->rgrc[0]);
             // We don't need this correction when we're fullscreen. We will
             // have the WS_POPUP size, so we don't have to worry about
             // borders, and the default frame will be fine.
-            if (IsZoomed(msg->hwnd) && (m_window->windowState() != Qt::WindowFullScreen))
+            if (IsZoomed(msg->hwnd) && !isFullScreen)
             {
                 // Windows automatically adds a standard width border to all
                 // sides when a window is maximized. We have to remove it
@@ -229,7 +233,6 @@ public:
                 const int rbw = resizeBorderWidth(m_window);
                 clientRect->left += rbw;
                 clientRect->right -= rbw;
-                nonClientAreaExists = true;
             }
             else if (m_platformHandlesResize && !IsZoomed(msg->hwnd))
             {
@@ -239,18 +242,28 @@ public:
                 // the window geometry for fullscreen. In this case, we should not make an adjustment
                 // so that the window gets placed appropriately. At the same time, when getting
                 // restored from full screen, we should make this adjustment (state is still fullscreen):
-                if (m_window->property("__windowFullScreen").toInt() == 0) // not about to enter full screen OR about to restore from full screen OR stateless window
+                if (!isFullScreen) // not about to enter full screen OR about to restore from full screen OR stateless window
                 {
                     // Do not adjust top, top is resized within the caption area. This is the behavior of SSD as well.
                     const int resizeWidth = resizeBorderWidth(m_window);
                     clientRect->left += resizeWidth;
                     clientRect->right -= resizeWidth;
                     clientRect->bottom -= resizeBorderHeight(m_window);
-                    nonClientAreaExists = true;
                 }
             }
 
-            *result = nonClientAreaExists ? 0 : WVR_REDRAW;
+            // The Qt and video swapchains redraw at the new size. Preserving
+            // and copying old client pixels makes live resizing show stale,
+            // shifted frames, especially when dragging the top or left edge.
+            if (result)
+                *result = WVR_REDRAW;
+            return true;
+        }
+
+        case WM_ERASEBKGND:
+        {
+            if (result)
+                *result = 1;
             return true;
         }
 
@@ -261,12 +274,16 @@ public:
             // borders. Block them to prevent drawing borders over the client
             // area.
 
-            *result = 0;
+            if (result)
+                *result = 0;
             return true;
         }
 
         case WM_NCHITTEST:
         {
+            if (!result)
+                return false;
+
             // send to determine on what part of UI is mouse ON
             // handle it to relay if mouse is on the CSD buttons
             // required for snap layouts menu (WINDOWS 11)
@@ -283,7 +300,7 @@ public:
                 if (!m_platformHandlesResize)
                     return false;
 
-                if (!IsZoomed(msg->hwnd) && (m_window->windowState() != Qt::WindowFullScreen))
+                if (!IsZoomed(msg->hwnd) && !isFullScreen)
                 {
                     // Top is resized within the caption area (even though it is client area), but still
                     // handled by the platform. This is also the behavior with SSD and we can not have
@@ -370,6 +387,8 @@ public:
             // get that message (especially if the user moves the mouse _real
             // fast_).
             const bool onSystemButton = (msg->wParam == HTCLOSE || msg->wParam == HTMINBUTTON || msg->wParam == HTMAXBUTTON);
+            if (onSystemButton && m_mainCtx)
+                emit m_mainCtx->askShow();
             if (!m_trackingMouse && onSystemButton)
             {
                 TRACKMOUSEEVENT ev{};
@@ -420,6 +439,10 @@ public:
             else
                 resetPressedState();
 
+            // required for win7 compositor, otherwise this
+            // paints default min/max/close buttons
+            if (result)
+                *result = 0;
             return true;
         }
 

@@ -71,6 +71,18 @@ if build_vlc and (host_system != 'darwin' or have_osx) and not have_win_store an
         win_subsystem: 'windows'
     )
 
+    if host_system == 'windows'
+        executable('vlc-redesign',
+            vlc_sources,
+            link_with: [libvlc, libvlccore],
+            link_args: gc_sections_linkargs,
+            include_directories: [vlc_include_dirs],
+            dependencies: vlc_deps,
+            c_args: [vlc_top_builddir_def, vlc_top_srcdir_def, '-DVLC_REDESIGN=1'],
+            win_subsystem: 'windows',
+        )
+    endif
+
     vlc_cache_gen_dep = executable('vlc-cache-gen',
         ['cachegen.c'] + vlc_win_extra,
         link_with: [vlc_libcompat, libvlc],

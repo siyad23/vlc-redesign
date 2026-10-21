@@ -332,6 +332,15 @@ Item {
         }
 
         Loader {
+            id: onboardingLoader
+            anchors.fill: parent
+            z: 95
+            active: MainCtx.hasFirstrun
+            source: "qrc:///qt/qml/VLC/MainInterface/OnboardingWizard.qml"
+            onLoaded: item.forceActiveFocus()
+        }
+
+        Loader {
             asynchronous: true
             source: "qrc:///qt/qml/VLC/Menus/GlobalShortcuts.qml"
         }

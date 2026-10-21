@@ -458,30 +458,35 @@ static const char * const scale_text[] = {
     "Custom (see below)",
 };
 
-static const struct pl_filter_config *const scale_config[] = {
-    [SCALE_BUILTIN]             = NULL,
-    [SCALE_SPLINE16]            = &pl_filter_spline16,
-    [SCALE_SPLINE36]            = &pl_filter_spline36,
-    [SCALE_SPLINE64]            = &pl_filter_spline64,
-    [SCALE_NEAREST]             = &pl_filter_box,
-    [SCALE_BILINEAR]            = &pl_filter_triangle,
-    [SCALE_GAUSSIAN]            = &pl_filter_gaussian,
-    [SCALE_SINC]                = &pl_filter_sinc,
-    [SCALE_LANCZOS]             = &pl_filter_lanczos,
-    [SCALE_GINSENG]             = &pl_filter_ginseng,
-    [SCALE_EWA_JINC]            = &pl_filter_ewa_jinc,
-    [SCALE_EWA_LANCZOS]         = &pl_filter_ewa_lanczos,
-    [SCALE_EWA_GINSENG]         = &pl_filter_ewa_ginseng,
-    [SCALE_EWA_HANN]            = &pl_filter_ewa_hann,
-    [SCALE_BICUBIC]             = &pl_filter_bicubic,
-    [SCALE_CATMULL_ROM]         = &pl_filter_catmull_rom,
-    [SCALE_MITCHELL]            = &pl_filter_mitchell,
-    [SCALE_ROBIDOUX]            = &pl_filter_robidoux,
-    [SCALE_ROBIDOUXSHARP]       = &pl_filter_robidouxsharp,
-    [SCALE_EWA_ROBIDOUX]        = &pl_filter_robidoux,
-    [SCALE_EWA_ROBIDOUXSHARP]   = &pl_filter_robidouxsharp,
-    [SCALE_CUSTOM]              = NULL,
-};
+/* Imported DLL data addresses must be resolved at runtime on Windows. */
+static inline const struct pl_filter_config *vlc_placebo_ScaleConfig(int index)
+{
+    const struct pl_filter_config *const scale_config[] = {
+        [SCALE_BUILTIN]             = NULL,
+        [SCALE_SPLINE16]            = &pl_filter_spline16,
+        [SCALE_SPLINE36]            = &pl_filter_spline36,
+        [SCALE_SPLINE64]            = &pl_filter_spline64,
+        [SCALE_NEAREST]             = &pl_filter_box,
+        [SCALE_BILINEAR]            = &pl_filter_triangle,
+        [SCALE_GAUSSIAN]            = &pl_filter_gaussian,
+        [SCALE_SINC]                = &pl_filter_sinc,
+        [SCALE_LANCZOS]             = &pl_filter_lanczos,
+        [SCALE_GINSENG]             = &pl_filter_ginseng,
+        [SCALE_EWA_JINC]            = &pl_filter_ewa_jinc,
+        [SCALE_EWA_LANCZOS]         = &pl_filter_ewa_lanczos,
+        [SCALE_EWA_GINSENG]         = &pl_filter_ewa_ginseng,
+        [SCALE_EWA_HANN]            = &pl_filter_ewa_hann,
+        [SCALE_BICUBIC]             = &pl_filter_bicubic,
+        [SCALE_CATMULL_ROM]         = &pl_filter_catmull_rom,
+        [SCALE_MITCHELL]            = &pl_filter_mitchell,
+        [SCALE_ROBIDOUX]            = &pl_filter_robidoux,
+        [SCALE_ROBIDOUXSHARP]       = &pl_filter_robidouxsharp,
+        [SCALE_EWA_ROBIDOUX]        = &pl_filter_robidoux,
+        [SCALE_EWA_ROBIDOUXSHARP]   = &pl_filter_robidouxsharp,
+        [SCALE_CUSTOM]              = NULL,
+    };
+    return scale_config[index];
+}
 
 #define UPSCALER_PRESET_TEXT "Upscaler preset"
 #define DOWNSCALER_PRESET_TEXT "Downscaler preset"
@@ -553,25 +558,30 @@ static const char * const filter_text[] = {
     "Spline64",
 };
 
-static const struct pl_filter_function *const filter_fun[] = {
-    [FILTER_NONE]           = NULL,
-    [FILTER_BOX]            = &pl_filter_function_box,
-    [FILTER_TRIANGLE]       = &pl_filter_function_triangle,
-    [FILTER_HANN]           = &pl_filter_function_hann,
-    [FILTER_HAMMING]        = &pl_filter_function_hamming,
-    [FILTER_WELCH]          = &pl_filter_function_welch,
-    [FILTER_KAISER]         = &pl_filter_function_kaiser,
-    [FILTER_BLACKMAN]       = &pl_filter_function_blackman,
-    [FILTER_GAUSSIAN]       = &pl_filter_function_gaussian,
-    [FILTER_SINC]           = &pl_filter_function_sinc,
-    [FILTER_JINC]           = &pl_filter_function_jinc,
-    [FILTER_SPHINX]         = &pl_filter_function_sphinx,
-    [FILTER_BCSPLINE]       = &pl_filter_function_bcspline,
-    [FILTER_BICUBIC]        = &pl_filter_function_bicubic,
-    [FILTER_SPLINE16]       = &pl_filter_function_spline16,
-    [FILTER_SPLINE36]       = &pl_filter_function_spline36,
-    [FILTER_SPLINE64]       = &pl_filter_function_spline64,
-};
+/* Imported DLL data addresses must be resolved at runtime on Windows. */
+static inline const struct pl_filter_function *vlc_placebo_FilterFunction(int index)
+{
+    const struct pl_filter_function *const filter_fun[] = {
+        [FILTER_NONE]           = NULL,
+        [FILTER_BOX]            = &pl_filter_function_box,
+        [FILTER_TRIANGLE]       = &pl_filter_function_triangle,
+        [FILTER_HANN]           = &pl_filter_function_hann,
+        [FILTER_HAMMING]        = &pl_filter_function_hamming,
+        [FILTER_WELCH]          = &pl_filter_function_welch,
+        [FILTER_KAISER]         = &pl_filter_function_kaiser,
+        [FILTER_BLACKMAN]       = &pl_filter_function_blackman,
+        [FILTER_GAUSSIAN]       = &pl_filter_function_gaussian,
+        [FILTER_SINC]           = &pl_filter_function_sinc,
+        [FILTER_JINC]           = &pl_filter_function_jinc,
+        [FILTER_SPHINX]         = &pl_filter_function_sphinx,
+        [FILTER_BCSPLINE]       = &pl_filter_function_bcspline,
+        [FILTER_BICUBIC]        = &pl_filter_function_bicubic,
+        [FILTER_SPLINE16]       = &pl_filter_function_spline16,
+        [FILTER_SPLINE36]       = &pl_filter_function_spline36,
+        [FILTER_SPLINE64]       = &pl_filter_function_spline64,
+    };
+    return filter_fun[index];
+}
 
 #define KERNEL_TEXT "Kernel function"
 #define KERNEL_LONGTEXT "Main function defining the filter kernel."

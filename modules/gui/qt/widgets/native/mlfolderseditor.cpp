@@ -32,6 +32,7 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QPushButton>
+#include <algorithm>
 
 MLFoldersEditor::MLFoldersEditor(QWidget *parent)
     : QTableWidget(0, 3, parent)
@@ -39,7 +40,10 @@ MLFoldersEditor::MLFoldersEditor(QWidget *parent)
     setHorizontalHeaderLabels({ qtr("Path"), qtr("Remove"), qtr("Reload") });
     horizontalHeader()->setMinimumSectionSize( 100 );
     horizontalHeader()->setSectionResizeMode( 0 , QHeaderView::Stretch );
-    horizontalHeader()->setFixedHeight( 24 );
+    // Let QHeaderView measure the active font and stylesheet padding. A fixed
+    // height clips the section labels with the redesigned preferences style.
+    verticalHeader()->setDefaultSectionSize(std::max(36, fontMetrics().height() + 16));
+    verticalHeader()->hide();
 }
 
 void MLFoldersEditor::setMLFoldersModel(MLFoldersBaseModel *foldersModel)
@@ -149,12 +153,16 @@ void MLFoldersEditor::newRow(const QUrl &mrl)
     {
         QWidget *wid = new QWidget( this );
         QBoxLayout* layout = new QBoxLayout( QBoxLayout::LeftToRight , wid );
+        layout->setContentsMargins(0, 0, 0, 0);
 
         QPushButton *pb = new QPushButton( icon , wid );
-        pb->setFixedSize( 18 , 18 );
+        pb->setObjectName(QStringLiteral("folderAction"));
+        pb->setFixedSize(28, 28);
+        pb->setAutoDefault(false);
         pb->setAccessibleName(accessibleName);
+        pb->setToolTip(accessibleName);
 
-        layout->addWidget( pb , Qt::AlignCenter );
+        layout->addWidget(pb, 0, Qt::AlignCenter);
         wid->setLayout( layout );
         connect( pb, &QPushButton::clicked, this, [this, col1, action]()
         {

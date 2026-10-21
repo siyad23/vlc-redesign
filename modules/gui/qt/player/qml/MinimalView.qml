@@ -30,16 +30,40 @@ FocusScope {
     property bool _showCSD: MainCtx.clientSideDecoration
                             && (MainCtx.intfMainWindow.visibility !== Window.FullScreen)
                             && (!MainCtx.hasEmbededVideo || _csdOnVideo)
+    property double _lastFullscreenToggleTime: 0
     property bool _csdOnVideo: true
 
     readonly property ColorContext colorContext: ColorContext {
         id: theme
-
-        palette: (MainCtx.hasEmbededVideo && MainCtx.pinVideoControls === false)
+        palette: (MainCtx.hasEmbededVideo && !MainCtx.pinVideoControls)
                  ? VLCStyle.darkPalette
                  : VLCStyle.palette
-
         colorSet: ColorContext.Window
+    }
+
+    function toggleFullscreen() {
+        var now = Date.now()
+        if (now - _lastFullscreenToggleTime < 350)
+            return
+        _lastFullscreenToggleTime = now
+
+        if (Player.fullscreen || (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)) {
+            Player.fullscreen = false
+            if (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)
+                MainCtx.setInterfaceFullScreen(false)
+        } else {
+            Player.fullscreen = true
+        }
+    }
+
+    function exitFullscreen() {
+        if (Player.fullscreen || (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)) {
+            Player.fullscreen = false
+            if (MainCtx.intfMainWindow && MainCtx.intfMainWindow.visibility === Window.FullScreen)
+                MainCtx.setInterfaceFullScreen(false)
+            return true
+        }
+        return false
     }
 
     VideoSurface {
@@ -63,6 +87,11 @@ FocusScope {
             mouseAutoHide.restart()
             videoSurface.cursorShape = Qt.ArrowCursor
             root._csdOnVideo = true
+        }
+
+        onMouseDblClicked: (button) => {
+            if (button === 0)
+                root.toggleFullscreen()
         }
 
         Timer {
@@ -97,13 +126,14 @@ FocusScope {
 
             source: MainCtx.useXmasCone()
                     ? "qrc:///logo/vlc48-xmas.png"
-                    : "qrc:///misc/cone.svg"
+                    : "qrc:///logo/vlc256.png"
 
             anchors.centerIn: parent
             width: Math.min(parent.width / 2, sourceSize.width)
             height: Math.min(parent.height / 2, sourceSize.height)
             fillMode: Image.PreserveAspectFit
             smooth: true
+            mipmap: true
             visible: MainCtx.bgCone
         }
 
@@ -169,6 +199,12 @@ FocusScope {
     }
 
     Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Escape) {
+            if (root.exitFullscreen()) {
+                event.accepted = true
+                return
+            }
+        }
         if (event.accepted)
             return
         MainCtx.sendHotkey(event.key, event.modifiers);

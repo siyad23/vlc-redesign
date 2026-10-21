@@ -62,9 +62,10 @@ static void OSDTextUpdate(subpicture_t *subpic,
     r->fmt.i_sar_den = 1;
     r->p_text = text_segment_New( sys->text );
 
-    const float margin_ratio = 0.04f;
-    const int   margin_h     = margin_ratio * fmt_dst->i_visible_width;
-    const int   margin_v     = margin_ratio * fmt_dst->i_visible_height;
+    const float margin_ratio_h = 0.04f;
+    const float margin_ratio_v = 0.08f;
+    const int   margin_h     = margin_ratio_h * fmt_dst->i_visible_width;
+    const int   margin_v     = margin_ratio_v * fmt_dst->i_visible_height;
 
     r->text_flags |= sys->position;
     r->b_absolute = false; r->b_in_window = true;

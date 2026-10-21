@@ -342,10 +342,10 @@ Open(struct vlc_gl_filter *filter, const config_chain_t *config,
     sys->render_params = pl_render_default_params;
 
     int upscaler_idx = libplacebo_scale_map[upscaler];
-    sys->render_params.upscaler = scale_config[upscaler_idx];
+    sys->render_params.upscaler = vlc_placebo_ScaleConfig(upscaler_idx);
 
     int downscaler_idx = libplacebo_scale_map[downscaler];
-    sys->render_params.downscaler = scale_config[downscaler_idx];
+    sys->render_params.downscaler = vlc_placebo_ScaleConfig(downscaler_idx);
 
     static const struct vlc_gl_filter_ops ops = {
         .draw = Draw,

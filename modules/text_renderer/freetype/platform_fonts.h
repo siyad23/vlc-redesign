@@ -72,8 +72,8 @@ extern "C" {
 # undef  HAVE_FONTCONFIG
 #elif defined( _WIN32 )
 # define SYSTEM_FONT_PATH                   "" /* Default path font found at run-time */
-# define SYSTEM_DEFAULT_FONT_FILE           "arial.ttf"
-# define SYSTEM_DEFAULT_FAMILY              "Arial"
+# define SYSTEM_DEFAULT_FONT_FILE           "seguisb.ttf"
+# define SYSTEM_DEFAULT_FAMILY              "Segoe UI Semibold"
 # define SYSTEM_DEFAULT_MONOSPACE_FONT_FILE "cour.ttf"
 # define SYSTEM_DEFAULT_MONOSPACE_FAMILY    "Courier New"
 # define HAVE_GET_FONT_BY_FAMILY_NAME
