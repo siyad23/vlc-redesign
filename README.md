@@ -1,4 +1,50 @@
-# VLC media player
+# VLC Redesign
+
+> A modern Windows experience for VLC, built on the same trusted playback engine.
+
+[![Latest release](https://img.shields.io/github/v/release/siyad23/vlc-redesign?display_name=tag&label=latest%20release)](https://github.com/siyad23/vlc-redesign/releases/latest)
+[![GitHub Pages](https://img.shields.io/badge/project%20site-VLC%20Redesign-orange)](https://siyad23.github.io/vlc-redesign/)
+[![License](https://img.shields.io/badge/license-GPLv2%20or%20later-blue)](#license)
+
+This fork explores a refreshed VLC desktop experience while preserving VLC's
+core strengths: broad format support, open-source development, privacy, and
+no-bloat playback. The current release focuses on Windows and is experimental.
+
+## Download
+
+The latest Windows x64 installer is available from the
+[v0.1.0 release](https://github.com/siyad23/vlc-redesign/releases/tag/v0.1.0).
+Download the installer and its `.sha256` checksum from the release assets.
+
+Visit the [VLC Redesign project site](https://siyad23.github.io/vlc-redesign/)
+for an overview of the design direction and feature highlights.
+
+## What's redesigned
+
+- **First-run onboarding** for language, media folders, themes, and accents.
+- **Focused playback controls** with floating bars and a consolidated top bar.
+- **Windows-native window behavior** and refreshed title-bar controls.
+- **Media library improvements** for browsing folders and collections.
+- **Modern themes and styling** while retaining VLC's familiar playback model.
+
+Read the [redesign analysis](VLC_REDESIGN_ANALYSIS.md) for the design context
+and implementation notes.
+
+## Building on Windows
+
+The repository includes PowerShell helpers for a native development build:
+
+```powershell
+.\build-vlc.ps1 -BuildDirectory .\build-ucrt
+```
+
+For an incremental build, add `-Incremental`. To run the Qt test suite, add
+`-RunTests`. See [Windows development](doc/windows-development.md) for
+prerequisites and troubleshooting.
+
+## Upstream VLC
+
+This project is based on the upstream [VLC media player](https://www.videolan.org/vlc/).
 
 **VLC** is a libre and open source **media player** and **multimedia engine**,
 focused on **playing everything**, and **running everywhere**.
